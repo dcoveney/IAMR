@@ -14,11 +14,11 @@ DIM         = 2
 COMP        = gnu
 
 DEBUG       = FALSE
-USE_MPI     = FALSE
+USE_MPI     = TRUE
 USE_OMP     = FALSE
 PROFILE     = FALSE
 
-USE_EB = FALSE
+USE_EB = TRUE
 
 USE_VELOCITY = FALSE
 

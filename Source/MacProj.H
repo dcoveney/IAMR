@@ -7,28 +7,34 @@
 #include <AMReX_Amr.H>
 #include <AMReX_AmrLevel.H>
 #include <AMReX_FluxRegister.H>
-#include <Godunov.H>
+// #include <NavierStokesBase.H>
+
+
+//
+// A useful enumeration of the forms for the advective terms
+//
+enum AdvectionForm {Conservative = 0, NonConservative};
 
 class MacProj
 {
 public:
-    
+
     MacProj (amrex::Amr*   parent,
              int    _finest_level,
-             amrex::BCRec* _phys_bc, 
+             amrex::BCRec* _phys_bc,
              int    /*not used*/ );
-    
+
     ~MacProj ();
 
-    
-    void install_level (int       level, 
+
+    void install_level (int       level,
                         amrex::AmrLevel* level_data);
 
-    void install_anelastic_coefficient (int                    level, 
+    void install_anelastic_coefficient (int                    level,
                                         amrex::Real**            anel_coeff);
-    void build_anelastic_coefficient (int                    level, 
+    void build_anelastic_coefficient (int                    level,
 				      amrex::Real**&            anel_coeff);
-    
+
     void setup (int level);
     void cleanup (int level);
     //
@@ -41,67 +47,57 @@ public:
                       amrex::Real            prev_time,
                       const amrex::MultiFab& divu,
                       int             have_divu,
-                      bool            increment_vel_register = true);
+                      const amrex::BCRec&   density_math_bc,
+                      bool            increment_vel_register = true );
 
     //
     // The sync solve.
     //
     void mac_sync_solve (int       level,
-                         amrex::Real      dt, 
+                         amrex::Real      dt,
                          amrex::MultiFab& rho_half,
+                         const amrex::BCRec&  rho_math_bc,
                          amrex::IntVect&  fine_ratio,
 			 amrex::Array<amrex::MultiFab*,AMREX_SPACEDIM>& Ucorr,
 			 amrex::MultiFab* Rhs_increment = nullptr);
 
-  /* REMOVE in favor of single version above. subtract_avg and offset never used
-    // this version is for the closed chamber LMC algorithm
-    void mac_sync_solve (int       level,
-                         amrex::Real      dt, 
-                         amrex::MultiFab& rho_half,
-                         amrex::IntVect&  fine_ratio,
-			 amrex::MultiFab* Rhs_increment,
-			 bool      subtract_avg,
-			 amrex::Real&     offset);
-  */
     //
     // Computing the sync tendency.
     //
-    void mac_sync_compute (int                   level,
+    void mac_sync_compute (int                          level,
 			   amrex::Array<amrex::MultiFab*,AMREX_SPACEDIM>& Ucorr,
-                           amrex::MultiFab*             u_mac, 
+                           amrex::MultiFab*             u_mac,
                            amrex::MultiFab&             Vsync,
                            amrex::MultiFab&             Ssync,
-                           amrex::MultiFab&             rho_half, 
+                           amrex::MultiFab&             rho_half,
                            amrex::FluxRegister*         adv_flux_reg,
                            amrex::Vector<AdvectionForm>& advectionType,
                            amrex::Real                  prev_time,
                            amrex::Real                  prev_pres_time,
                            amrex::Real                  dt,
-                           int                   NUM_STATE,
+                           int                          NUM_STATE,
                            amrex::Real                  be_cn_theta,
-                           bool                  modify_reflux_normal_vel,
-                           int		         do_mom_diff,
-                           const amrex::Vector<int>&     increment_sync = amrex::Vector<int>(),
-			   bool                  update_fluxreg = true);
+                           bool                         modify_reflux_normal_vel,
+                           int		                do_mom_diff,
+                           const amrex::Vector<int>&    increment_sync = amrex::Vector<int>(),
+			   bool                         update_fluxreg = true);
 
-    void mac_sync_compute (int                   level,
+    void mac_sync_compute (int                          level,
 			   amrex::Array<amrex::MultiFab*,AMREX_SPACEDIM>& Ucorr,
                            amrex::MultiFab&             Sync,
-                           int                   comp,
-                           int                   s_ind,
-                           const amrex::MultiFab*       const* sync_edges,
-			   int                   eComp,
+                           int                          comp,
+                           int                          s_ind,
+                           amrex::MultiFab* const*      sync_edges,
+			   int                          eComp,
                            amrex::MultiFab&             rho_half,
                            amrex::FluxRegister*         adv_flux_reg,
                            amrex::Vector<AdvectionForm>& advectionType,
-                           bool		         modify_reflux_normal_vel,
-                           amrex::Real                  dt,
-			   bool                  update_fluxreg = true);
+                           bool		                 modify_reflux_normal_vel,
+                           amrex::Real                   dt,
+			   bool                          update_fluxreg = true);
 
     static void Initialize ();
     static void Finalize ();
-
-protected:
 
     void test_umac_periodic (int level, amrex::MultiFab* u_mac);
 
@@ -119,7 +115,7 @@ protected:
 
     void set_outflow_bcs (int level,
                           amrex::MultiFab* mac_phi,
-                          const amrex::MultiFab* u_mac, 
+                          const amrex::MultiFab* u_mac,
                           const amrex::MultiFab& S,
                           const  amrex::MultiFab& divu);
     //
@@ -140,7 +136,7 @@ protected:
     //
     // Anelastic coefficient array.
     //
-    static int                   anel_grow;  
+    static int                   anel_grow;
     amrex::Vector<amrex::Real**> anel_coeff;
     //
     // Parameters.
