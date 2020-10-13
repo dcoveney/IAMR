@@ -1,0 +1,7 @@
+&fortin
+
+  probtype = 5
+  denerr = 1.0
+  vorterr = 0.
+
+/

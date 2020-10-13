@@ -1,0 +1,178 @@
+#*******************************************************************************
+# INPUTS.2D.POISEUILLE
+#*******************************************************************************
+
+# turn on tiling for testing
+fabarray.mfiter_tile_size = 8 8 8 
+
+
+
+#NOTE: You may set *either* max_step or stop_time, or you may set them both.
+
+# Maximum number of coarse grid timesteps to be taken, if stop_time is
+#  not reached first.
+max_step 				= -1
+# Time at which calculation stops, if max_step is not reached first.
+stop_time 				= 1.2241205
+
+# Tolerance for assuming system has reached steady-state
+#ns.stop_when_steady 	= 0
+#ns.steady_tol 		= 1.0e-5
+
+ns.do_vorticity_ref = 0
+ns.do_density_ref = 1
+ns.do_scalminmax = 1
+ns.do_denminmax = 1
+ns.do_trac2 	= 1
+
+#*******************************************************************************
+
+# Number of cells in each coordinate direction at the coarsest level
+amr.n_cell 			= 256 128
+amr.max_grid_size		= 16
+amr.blocking_factor		= 4
+#*******************************************************************************
+
+# Maximum level (defaults to 0 for single level calculation)
+amr.max_level			= 0 # maximum number of levels of refinement
+
+
+
+#*******************************************************************************
+
+# Sets the "NavierStokes" code to not be verbose
+ns.v                    = 1
+
+#*******************************************************************************
+
+# Sets the "amr" code to be verbose
+amr.v                   = 4
+mac.v 			= 4
+#mac.mac_tol		= 1.0e-2
+
+#*******************************************************************************
+
+# Interval (in number of coarse timesteps) between checkpoint(restart) files
+amr.check_int			= 10
+
+#*******************************************************************************
+
+# Interval (in number of coarse timesteps) between plot files
+amr.plot_int			= 50
+
+#*******************************************************************************
+
+# CFL number to be used in calculating the time step : dt = dx / max(velocity)
+ns.cfl                  = 0.1  # CFL number used to set dt
+ns.testNumber 		= 14
+ns.rhoG			= 1.225
+ns.rhoL			= 999.2
+ns.uG			= 0.5
+ns.uL			= -0.5
+ns.circ			= 0.075
+#ns.muL			= 7.105e-4
+ns.muL			= 1.1377e-3
+ns.muG			= 1.77625e-5
+ns.x0			= 0.60
+ns.y0			= 0.30
+#*******************************************************************************
+
+# Factor by which the first time is shrunk relative to CFL constraint
+ns.init_shrink          = 0.3  # factor which multiplies the very first time step
+ns.init_iter            = 0
+#ns.init_dt		= 5e-4
+
+#*******************************************************************************
+
+# Viscosity coefficient 
+ns.vel_visc_coef        = 1.77625e-5
+
+ns.do_variable_visc 	= 1
+
+geometry.coord_sys   =  0
+#*******************************************************************************
+
+# Diffusion coefficient for tracer
+ns.scal_diff_coefs      = 0.0 0.0
+
+#*******************************************************************************
+
+# Forcing term defaults to  rho * abs(gravity) "down"
+ns.gravity              = -9.81
+
+#*******************************************************************************
+
+# Name of the file which specifies problem-specific parameters (defaults to "probin")
+amr.probin_file 		= probin.2d.boeckSingleFluid 
+
+#*******************************************************************************
+
+# Set to 0 if x-y coordinate system, set to 1 if r-z.
+geometry.coord_sys   	=  0
+eb2.geom_type    =  all_regular
+#*******************************************************************************
+
+# Physical dimensions of the low end of the domain.
+geometry.prob_lo     	=  0.0 0.0 
+
+# Physical dimensions of the high end of the domain.
+geometry.prob_hi     	=  1.610 0.6
+
+#*******************************************************************************
+
+#Set to 1 if periodic in that direction
+geometry.is_periodic 	=  0  0
+
+#*******************************************************************************
+
+# Boundary conditions on the low end of the domain.
+ns.lo_bc             	= 4 4 
+
+# Boundary conditions on the high end of the domain.
+ns.hi_bc             	= 4 4
+
+# 0 = Interior/Periodic  3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+#*******************************************************************************
+
+# Continue from checkpoint 
+amr.restart 			= chk10000
+
+#*******************************************************************************
+
+# Write all derived quantities to plot files
+amr.derive_plot_vars    = ALL
+
+
+
+
+#*******************************************************************************
+# For solver reasons, use multigrid iterations as the bottom solve.
+
+# mg.usecg = 0
+#mg.use_hypre = 0
+# mg.maxiter=10000
+ #mac.maxiter = 1
+#mac.mac_tol = 0.9
+#mac.mac_sync_tol = 1.0e-2
+#mac.mac_abs_tol  = 1.0e-2
+mac.fix_mac_sync_rhs = 1
+mac.use_hypre = 0
+#mac.usecg = 0
+mac.hypre_verbose = 4
+mg.v = 4
+proj.v = 4
+proj.proj_tol = 1.0e-8
+#proj.proj_abs_tol = 0.9
+#proj.sync_tol = 0.9
+#proj.use_hypre = 0
+nodal_proj.num_pre_smooth = 100
+nodal_proj.num_post_smooth = 100
+
+proj.use_harmonic_average = false
+proj.use_gauss_seidel = true
+
+
+#*******************************************************************************
