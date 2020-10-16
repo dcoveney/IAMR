@@ -12,7 +12,7 @@
 #ns.do_mom_diff=1
 #ns.predict_mom_together=1
 
-ns.do_denminmax=1
+ns.do_denminmax=0
 #ns.init_iter=0
 ns.sum_interval = 0
 
@@ -29,7 +29,7 @@ stop_time 		= -1
 # Use the tracer for the refinement criterion
 ns.do_tracer_ref = 1
 ns.do_vorticity_ref = 1
-ns.do_scalminmax = 1
+ns.do_scalminmax = 0
 ns.do_trac2  = 0
 ns.do_trac3  = 0
 ns.getForceVerbose = 1
@@ -72,7 +72,8 @@ amr.v                   = 1
 # Interval (in number of coarse timesteps) between checkpoint(restart) files
 amr.check_int		= 10 
 #amr.restart 		= chk01540
-
+ns.init_iter= 0
+ns.do_init_proj=0
 #*******************************************************************************
 
 # Interval (in number of coarse timesteps) between plot files
@@ -100,7 +101,7 @@ ns.init_shrink          = 0.3  # factor which multiplies the very first time ste
 #*******************************************************************************
 
 # Viscosity coefficient 
-ns.vel_visc_coef        = 0.001
+ns.vel_visc_coef        = 0.0
 #ns.vel_visc_coef        = 0
 
 #*******************************************************************************

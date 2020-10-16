@@ -572,7 +572,7 @@ NavierStokes::initialState(FArrayBox& statein, const Box& bx,
 
                 else if(testNumber == 8)
                 {
-                    double Lx = 0.01;
+                    double Lx = 1.0;
                     ParmParse pp("ns");
 
                     double rhoG, muG;
@@ -582,10 +582,10 @@ NavierStokes::initialState(FArrayBox& statein, const Box& bx,
                     pp.query("muG", muG);
                     pp.query("muL", muL);
 
-                    double pertHeight = 2.0*Lx + 0.05*Lx*cos(2.0*M_PI*x/Lx);
+                    double pertHeight = 2.0*Lx + 0.1*Lx*cos(2.0*M_PI*x/Lx);
 
-                    stateArray(i, j, k, Density) = rhoG + 0.5*(rhoL-rhoG)*(1+tanh((y-pertHeight)/(0.0005)));
-                    stateArray(i,j, k,  Tracer) = 1.0 - 0.5*(1+tanh((y-pertHeight)/(0.0005)));
+                    stateArray(i, j, k, Density) = rhoG + 0.5*(rhoL-rhoG)*(1+tanh((y-pertHeight)/(0.01)));
+                    stateArray(i,j, k,  Tracer) = 1.0 - 0.5*(1+tanh((y-pertHeight)/(0.01)));
                     // stateArray(i,j, k,  Tracer2) = muG + 0.5*(muL-muG)*(1+tanh((y-pertHeight)/0.05));
                     // stateArray(i, j, Viscosity) = mu1 + 0.5*(mu2-mu1)*(1+tanh((y-pertHeight)/0.001));
                     // if(y < pertHeight)
@@ -1004,24 +1004,35 @@ NavierStokes::initialState(FArrayBox& statein, const Box& bx,
                     pp.query("x0",         x0);
                     pp.query("y0",         y0);
                     double dist = sqrt((x-x0)*(x-x0)+(y-y0)*(y-y0));
-
-                    stateArray(i,j, k, Density) = rho1 + 0.5*(rho2-rho1)*(1-tanh(1000.0*(dist-R)));
-                    stateArray(i,j, k, Tracer) = 0.5*(1-tanh(1000.0*(dist-R)));
-
-                    stateArray(i,j, k, Xvel) = 0.0;
-                    stateArray(i,j, k, Yvel) = 0.0;
-                    // if(dist < R)
-                    // {
-                    //     stateArray(i,j, k, Tracer) = 1.0;
-                    //     // stateArray(i,j, k, Viscosity) = mu1;
-                    //     stateArray(i,j, k, Density) = rho2;
-                    // }
-                    // else
-                    // {
-                    //     stateArray(i,j, k, Tracer) = 0.0;
-                    //     // stateArray(i,j, k, Viscosity) = mu2;
-                    //     stateArray(i,j, k, Density) = rho1;
-                    // }
+                    double thck = 1000.0; // interface thickness parameter
+                    if(do_trac3)
+                    {
+                        if(y < y0)
+                        {
+                            // stateArray(i,j, k, Tracer) = 0.0;
+                            stateArray(i,j, k, Tracer2) = 1.0 - 0.5*(1-tanh(thck*(dist-R)));
+                            stateArray(i,j, k, Tracer3) = 0.0;
+                            // stateArray(i,j, k, Density) = rho1;
+                        }
+                        else
+                        {
+                            stateArray(i,j, k, Tracer3) = 1.0 - 0.5*(1-tanh(thck*(dist-R)));
+                            stateArray(i,j, k, Tracer2) = 0.0;
+                            // stateArray(i,j, k, Tracer) = 0.0;
+                            // stateArray(i,j, k, Density) = rho1;
+                        }
+                        stateArray(i,j, k, Density) = rho1 + 0.5*(rho2-rho1)*(1-tanh(thck*(dist-R)));
+                        // if(nTrac == 3)
+                        // {
+                        stateArray(i,j, k, Tracer) = 0.5*(1-tanh(thck*(dist-R)));
+                    }
+                    else
+                    {
+                        stateArray(i,j, k, Density) = rho1 + 0.5*(rho2-rho1)*(1-tanh(thck*(dist-R)));
+                        // if(nTrac == 3)
+                        // {
+                        stateArray(i,j, k, Tracer) = 0.5*(1-tanh(thck*(dist-R)));
+                    }
                 }
                 else if(testNumber == 19)
                 {
@@ -1703,14 +1714,17 @@ NavierStokes::scalar_advection (Real dt,
     // Compute the advective forcing.
     //
     {
-        FillPatchIterator S_fpi(*this,visc_terms,godunov_hyp_grow+6,prev_time,State_Type,fscalar,num_scalars);
+        FillPatchIterator S_fpi(*this,visc_terms,godunov_hyp_grow,prev_time,State_Type,fscalar,num_scalars);
         MultiFab& Smf=S_fpi.get_mf();
 
         // Floor small values of states to be extrapolated
 	floor(Smf);
-    MultiFab SBorder(grids, dmap, NUM_STATE,godunov_hyp_grow+3,MFInfo(), Factory());
+    MultiFab& S_old = get_old_data(State_Type);
+    MultiFab SBorder(grids, dmap, NUM_STATE,godunov_hyp_grow+6,MFInfo(), Factory());
+    MultiFab::Copy(SBorder, S_old, 0, 0, NUM_STATE, S_old.nGrow());
+
     MultiFab scalGradFab(grids, dmap, 3*nTrac, godunov_hyp_grow+4);
-    FillPatch(*this, SBorder, godunov_hyp_grow+3, prev_time, State_Type, 0, NUM_STATE);
+    FillPatch(*this, SBorder, godunov_hyp_grow+6, prev_time, State_Type, 0, NUM_STATE);
 
         FillPatchIterator U_fpi(*this,visc_terms,godunov_hyp_grow,prev_time,State_Type,Xvel,BL_SPACEDIM);
         const MultiFab& Umf=U_fpi.get_mf();
@@ -1780,7 +1794,7 @@ NavierStokes::scalar_advection (Real dt,
             for(MFIter SGmfi(scalGradFab,true); SGmfi.isValid(); ++SGmfi)
             {
                 const Box& bx = SGmfi.tilebox();
-                computeScalarGradient(Smf[SGmfi], scalGradFab[SGmfi], bx, dx, Smf.nComp());
+                computeScalarGradient(SBorder[SGmfi], scalGradFab[SGmfi], bx, dx, Smf.nComp());
             }
             Vector<int> state_bc;
             FArrayBox tforces;
