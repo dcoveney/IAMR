@@ -76,8 +76,8 @@ NavierStokesBase::getForce (FArrayBox&       force,
           pp.query("sigma13", sigma[1]);
           pp.query("sigma23", sigma[2]);
           sigmaS[0] = (sigma[1]-sigma[2]+sigma[0])/2.0; //sigmaS1;
-          sigmaS[1] = sigma[0] - sigmaS[0]; // sigmaS2;
-          sigmaS[2] = sigma[1] - sigmaS[0]; //sigmaS3;
+          sigmaS[1] = (sigma[0]+sigma[2]-sigma[1])/2.0; // sigmaS2;
+          sigmaS[2] = (sigma[2]+sigma[1]-sigma[0])/2.0; //sigmaS3;
       }
       else if(nTrac == 2)
       {
