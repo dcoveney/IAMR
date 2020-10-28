@@ -7,20 +7,20 @@
 
 # Maximum number of coarse grid timesteps to be taken, if stop_time is
 #  not reached first.
-max_step 		= -1
+max_step 		= 10
 
 # Time at which calculation stops, if max_step is not reached first.
 stop_time 		= 1.5
 
 ns.do_vorticity_ref = 0
 ns.do_density_ref = 1
-ns.do_scalminmax = 0
+ns.do_scalminmax = 1
 ns.do_denminmax = 0
 ns.do_trac2 = 0
 #*******************************************************************************
 
 # Number of cells in each coordinate direction at the coarsest level
-amr.n_cell 		= 256  1024
+amr.n_cell 		= 128  512
 amr.max_grid_size	= 16
 
 amr.grid_eff = 0.95

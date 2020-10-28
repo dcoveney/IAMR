@@ -138,6 +138,10 @@ public:
     void scalar_advection (amrex::Real dt,
                            int  first_scalar,
                            int  last_scalar);
+    //
+    void scalar_diffusion_update (amrex::Real dt,
+                                  int  first_scalar,
+                                  int  last_scalar);
 
 protected:
 
@@ -228,10 +232,6 @@ private:
     void scalar_update (amrex::Real dt,
                         int  first_scalar,
                         int  last_scalar);
-    //
-    void scalar_diffusion_update (amrex::Real dt,
-                                  int  first_scalar,
-                                  int  last_scalar);
     //
     // Define error estimators
     //

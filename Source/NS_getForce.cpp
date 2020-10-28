@@ -27,7 +27,6 @@ using namespace amrex;
 void
 NavierStokesBase::getForce (FArrayBox&       force,
                             const Box&       bx,
-                            int              ngrow,
                             int              scomp,
                             int              ncomp,
                             const Real       time,
@@ -54,12 +53,11 @@ NavierStokesBase::getForce (FArrayBox&       force,
    const int   nscal    = NUM_SCALARS;
       int tracInd = 0;
       // double sigma = 0.0;
-      Vector<Real> sigma(nTrac); Vector<Real> sigmaS(nTrac);
+      Vector<Real> sigmaS(nTrac);
       for(int n = 0; n < nTrac; n++)
       {
-          sigma[n] = 0.0; sigmaS[n] = 0.0;
+          sigmaS[n] = 0.0;
       }
-      ParmParse pp("ns");
       if(ncomp == nscal)
       {
           tracInd = 1;
@@ -72,23 +70,19 @@ NavierStokesBase::getForce (FArrayBox&       force,
       //compute phasic-specific surface tension coefficients
       if(nTrac == 3)
       {
-          pp.query("sigma12", sigma[0]);
-          pp.query("sigma13", sigma[1]);
-          pp.query("sigma23", sigma[2]);
-          sigmaS[0] = (sigma[1]-sigma[2]+sigma[0])/2.0; //sigmaS1;
-          sigmaS[1] = (sigma[0]+sigma[2]-sigma[1])/2.0; // sigmaS2;
-          sigmaS[2] = (sigma[2]+sigma[1]-sigma[0])/2.0; //sigmaS3;
+
+          sigmaS[0] = (ST_coefs[1]-ST_coefs[2]+ST_coefs[0])/2.0; //sigmaS1;
+          sigmaS[1] = (ST_coefs[0]+ST_coefs[2]-ST_coefs[1])/2.0; // sigmaS2;
+          sigmaS[2] = (ST_coefs[2]+ST_coefs[1]-ST_coefs[0])/2.0; //sigmaS3;
       }
       else if(nTrac == 2)
       {
-          pp.query("sigma12", sigma[0]);
-          sigmaS[0] = sigma[0];
+          sigmaS[0] = ST_coefs[0];
           sigmaS[1] = 0.0;
       }
       else
       {
-          pp.query("sigma12", sigma[0]);
-          sigmaS[0] = sigma[0];
+          sigmaS[0] = ST_coefs[0];
 
       }
 
@@ -97,7 +91,6 @@ NavierStokesBase::getForce (FArrayBox&       force,
                      << "time      = " << time << std::endl
                      << "scomp     = " << scomp << std::endl
                      << "ncomp     = " << ncomp << std::endl
-                     << "ngrow     = " << ngrow << std::endl
                      << "scalScomp = " << scalScomp << std::endl;
 
       if (scomp==0)
@@ -109,6 +102,8 @@ NavierStokesBase::getForce (FArrayBox&       force,
       else if (scomp==4) amrex::Print() << "Doing tracer only" << std::endl;
       else               amrex::Print() << "Doing individual scalar" << std::endl;
 
+      amrex::Print() << "NavierStokesBase::getForce(): Filling Force on box:"
+		     << bx << std::endl;
 #if (AMREX_SPACEDIM == 3)
       amrex::Print() << "NavierStokesBase::getForce(): Force Domain:" << std::endl;
       amrex::Print() << "(" << f_lo[0] << "," << f_lo[1] << "," << f_lo[2] << ") - "
@@ -258,14 +253,26 @@ NavierStokesBase::getForce (FArrayBox&       force,
 
                   for(int n = 0; n < nTrac; n++)
                   {
+                      #if(AMREX_SPACEDIM==3)
+                      Fsvx += sigmaS[n]*scalGradArr(i,j,k,4*n)*scalGradArr(i,j,k,4*n+3);
+                      Fsvy += sigmaS[n]*scalGradArr(i,j,k,4*n+1)*scalGradArr(i,j,k,4*n+3);
+                      Fsvz += sigmaS[n]*scalGradArr(i,j,k,4*n+2)*scalGradArr(i,j,k,4*n+3);
+                      #else
                       Fsvx += sigmaS[n]*scalGradArr(i,j,k,3*n)*scalGradArr(i,j,k,3*n+2);
                       Fsvy += sigmaS[n]*scalGradArr(i,j,k,3*n+1)*scalGradArr(i,j,k,3*n+2);
+                      #endif
                   }
               }
               else
               {
+                  #if(AMREX_SPACEDIM==3)
+                  Fsvx = sigmaS[0]*scalGradArr(i,j,k,0)*scalGradArr(i,j,k,3);
+                  Fsvy = sigmaS[0]*scalGradArr(i,j,k,1)*scalGradArr(i,j,k,3);
+                  Fsvz = sigmaS[0]*scalGradArr(i,j,k,2)*scalGradArr(i,j,k,3);
+                  #else
                   Fsvx = sigmaS[0]*scalGradArr(i,j,k,0)*scalGradArr(i,j,k,2);
                   Fsvy = sigmaS[0]*scalGradArr(i,j,k,1)*scalGradArr(i,j,k,2);
+                  #endif
               }
 
 
@@ -274,7 +281,7 @@ NavierStokesBase::getForce (FArrayBox&       force,
             frc(i,j,k,1) = grav*scal(i,j,k,0) + Fsvy;
      #elif ( AMREX_SPACEDIM == 3 )
             frc(i,j,k,1) = Fsvy;
-            frc(i,j,k,2) = grav*scal(i,j,k,0);
+            frc(i,j,k,2) = grav*scal(i,j,k,0) + Fsvz;
      #endif
           });
         // }

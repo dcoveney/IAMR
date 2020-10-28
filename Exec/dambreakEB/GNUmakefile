@@ -1,6 +1,6 @@
 #AMREX_HOME defines the directory in which we will find the BoxLib directory
 AMREX_HOME ?= ../../../amrex
-HYPRE_DIR=../../../hypre-18.2.2
+HYPRE_DIR=../../../hypre/src/hypre
 #TOP defines the directory in which we will find Source, Exec, etc.
 TOP = ../..
 

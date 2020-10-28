@@ -311,9 +311,17 @@ initialize_EB2 (const Geometry& geom, const int required_coarsening_level,
     EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
 
   }
-
-#endif
-#if(AMREX_SPACEDIM == 2)
+  else if(geom_type == "soliton3d")
+ {
+     bool inside = false;
+     EB2::BoxIF box1({2.0, 0.05, -0.3}, {4.0,-0.147, 0.350001}, inside);
+     EB2::BoxIF box2({3.25, -0.2, 0.15}, {3.75,0.0, 0.25}, true);
+     EB2::SphereIF cyl(0.1, {3.0, -0.147, 0.2}, true);
+     auto boxcyl = EB2::makeIntersection(box1, (box2), cyl);
+     auto gshop = EB2::makeShop(boxcyl);
+     EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level, 10);
+ }
+#else
  if(geom_type == "oil_spill")
 {
 
@@ -409,19 +417,7 @@ else if(geom_type == "t_junction")
     auto gshop = EB2::makeShop(VFM);
     EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level,10);
 }
-#endif
-#if(AMREX_SPACEDIM == 3)
-else if(geom_type == "soliton3d")
-{
-    bool inside = false;
-    EB2::BoxIF box1({2.0, -0.3, 0.05}, {4.0,-0.147, 0.350001}, inside);
-    EB2::BoxIF box2({3.25, -0.2, 0.15}, {3.75,0.0, 0.25}, true);
-    EB2::SphereIF cyl(0.1, {3.0, -0.147, 0.2}, true);
-    auto boxcyl = EB2::makeIntersection(box1, (box2), cyl);
-    auto gshop = EB2::makeShop(boxcyl);
-    EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level, 10);
-}
-#else
+
 else if(geom_type == "soliton2d")
 {
     bool inside = false;
@@ -434,15 +430,12 @@ else if(geom_type == "soliton2d")
     EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level, 10);
 }
 #endif
-    else
-    {
-        EB2::Build(geom, required_coarsening_level, max_coarsening_level, 4);
+else
+{
+    EB2::Build(geom, required_coarsening_level, max_coarsening_level, 4);
 
-    }
+}
 
-#if BL_SPACEDIM > 2
-  }
- #endif
 }
 
 void

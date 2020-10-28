@@ -135,7 +135,7 @@ NavierStokes::initData ()
             Dim3 hi = ubound(vbx);
             const Real* xlo = gridloc.lo();
             const Real* xhi = gridloc.hi();
-            Real x, y;
+            Real x, y,z;
             for(int i = lo.x; i <= hi.x; i++)
             {
                 for(int j = lo.y; j <= hi.y; j++)
@@ -144,6 +144,7 @@ NavierStokes::initData ()
                     {
                         x = xlo[0] + dx[0]*((i-lo.x) + 0.5);
                         y = xlo[1] + dx[1]*((j-lo.y) + 0.5);
+                        z = xlo[2] + dx[2]*((k-lo.z) + 0.5);
                         // if(y < 0)
                         // {
                         //     stateArray(i,j,k,Density) = 999.2;
@@ -154,10 +155,18 @@ NavierStokes::initData ()
                         //     stateArray(i,j,k,Density) = 1.225;
                         //
                         // }
+                        #if(AMREX_SPACEDIM==3)
+                        lookUpData(solitonInit, x, z, cellData);
+                        #else
                         lookUpData(solitonInit, x, y, cellData);
+                        #endif
                         stateArray(i,j,k,Density) = cellData[0];
                         stateArray(i,j,k,Xvel) = cellData[1];
+                        #if(AMREX_SPACEDIM==3)
+                        stateArray(i,j,k,Zvel) = cellData[2];
+                        #else
                         stateArray(i,j,k,Yvel) = cellData[2];
+                        #endif
                         if(cellData[0] == 1000.0)
                         {
                             stateArray(i,j,k,Tracer) = 0.0;
@@ -382,7 +391,7 @@ NavierStokes::initialState(FArrayBox& statein, const Box& bx,
     Dim3 hi = ubound(bx);
     const Real* xlo = gridloc.lo();
     const Real* xhi = gridloc.hi();
-    Real x, y;
+    Real x, y, z;
 
     // std::cout << "Break ";
     for(int i = lo.x; i <= hi.x; i++)
@@ -395,6 +404,9 @@ NavierStokes::initialState(FArrayBox& statein, const Box& bx,
                 // y = dx[1]*(j+0.5);
                 x = xlo[0] + dx[0]*((i-lo.x) + 0.5);
                 y = xlo[1] + dx[1]*((j-lo.y) + 0.5);
+                #if(AMREX_SPACEDIM==3)
+                z = xlo[2] + dx[2]*((k-lo.z) + 0.5);
+                #endif
                 if(testNumber == 0)
                 {
                     // Rayleigh Problem or Stokes First Problem:
@@ -572,7 +584,7 @@ NavierStokes::initialState(FArrayBox& statein, const Box& bx,
 
                 else if(testNumber == 8)
                 {
-                    double Lx = 1.0;
+                    double Lx = 0.01;
                     ParmParse pp("ns");
 
                     double rhoG, muG;
@@ -582,10 +594,10 @@ NavierStokes::initialState(FArrayBox& statein, const Box& bx,
                     pp.query("muG", muG);
                     pp.query("muL", muL);
 
-                    double pertHeight = 2.0*Lx + 0.1*Lx*cos(2.0*M_PI*x/Lx);
+                    double pertHeight = 2.0*Lx + 0.05*Lx*cos(2.0*M_PI*x/Lx);
 
-                    stateArray(i, j, k, Density) = rhoG + 0.5*(rhoL-rhoG)*(1+tanh((y-pertHeight)/(0.01)));
-                    stateArray(i,j, k,  Tracer) = 1.0 - 0.5*(1+tanh((y-pertHeight)/(0.01)));
+                    stateArray(i, j, k, Density) = rhoG + 0.5*(rhoL-rhoG)*(1+tanh((y-pertHeight)/(0.0005)));
+                    stateArray(i,j, k,  Tracer) = 1.0 - 0.5*(1+tanh((y-pertHeight)/(0.0005)));
                     // stateArray(i,j, k,  Tracer2) = muG + 0.5*(muL-muG)*(1+tanh((y-pertHeight)/0.05));
                     // stateArray(i, j, Viscosity) = mu1 + 0.5*(mu2-mu1)*(1+tanh((y-pertHeight)/0.001));
                     // if(y < pertHeight)
@@ -1217,6 +1229,50 @@ NavierStokes::initialState(FArrayBox& statein, const Box& bx,
                     stateArray(i,j,k, Xvel) = 0.0;
                     stateArray(i,j,k, Yvel) = 0.0;
                 }
+                else if(testNumber == 26)
+                {
+                    //3D bubble
+                    double rho1, rho2, sigma, R, x0, y0, z0;
+                    ParmParse pp("ns");
+                    ParmParse ppGeom("geometry");
+                    pp.query("rho1",    rho1);
+                    pp.query("rho2",    rho2);
+                    pp.query("R",          R);
+                    pp.query("sigma",   sigma);
+                    pp.query("x0",         x0);
+                    pp.query("y0",         y0);
+                    pp.query("z0",         z0);
+                    double dist = sqrt((x-x0)*(x-x0)+(y-y0)*(y-y0)+(z-z0)*(z-z0));
+                    if(do_trac3)
+                    {
+                        if(z < z0)
+                        {
+                            // stateArray(i,j, k, Tracer) = 0.0;
+                            stateArray(i,j, k, Tracer2) = 1.0 - 0.5*(1-tanh(2500.0*(dist-R)));
+                            stateArray(i,j, k, Tracer3) = 0.0;
+                            // stateArray(i,j, k, Density) = rho1;
+                        }
+                        else
+                        {
+                            stateArray(i,j, k, Tracer3) = 1.0 - 0.5*(1-tanh(2500.0*(dist-R)));
+                            stateArray(i,j, k, Tracer2) = 0.0;
+                            // stateArray(i,j, k, Tracer) = 0.0;
+                            // stateArray(i,j, k, Density) = rho1;
+                        }
+                        stateArray(i,j, k, Density) = rho1 + 0.5*(rho2-rho1)*(1-tanh(2500.0*(dist-R)));
+                        // if(nTrac == 3)
+                        // {
+                        stateArray(i,j, k, Tracer) = 0.5*(1-tanh(2500.0*(dist-R)));
+                    }
+                    else
+                    {
+                        stateArray(i,j, k, Density) = rho1 + 0.5*(rho2-rho1)*(1-tanh(2500.0*(dist-R)));
+                        // if(nTrac == 3)
+                        // {
+                        stateArray(i,j, k, Tracer) = 0.5*(1-tanh(2500.0*(dist-R)));
+                    }
+
+                }
             }
         }
     }
@@ -1561,14 +1617,14 @@ NavierStokes::predict_velocity (Real  dt)
     // Floor small values of states to be extrapolated
     floor(Umf);
 
-    FillPatchIterator S_fpi(*this,visc_terms,6,prev_time,State_Type,Density,NUM_SCALARS);
+    FillPatchIterator S_fpi(*this,visc_terms,godunov_hyp_grow+1,prev_time,State_Type,Density,NUM_SCALARS);
     MultiFab& Smf=S_fpi.get_mf();
     // MultiFab SAlias(Smf, amrex::make_alias,0,Smf.nComp());
     // const BoxArray& ba = Smf.boxArray();
     // const DistributionMapping& dm = Smf.DistributionMap();
     // MultiFab SBorder(ba, dm, Smf.nComp(),12);
 
-    MultiFab scalGradFab(grids, dmap, 3*nTrac, 4);
+    MultiFab scalGradFab(grids, dmap, (AMREX_SPACEDIM+1)*nTrac, godunov_hyp_grow);
 
     //
     // Compute "grid cfl number" based on cell-centered time-n velocities
@@ -1588,9 +1644,10 @@ NavierStokes::predict_velocity (Real  dt)
     Vector<BCRec> math_bcs(AMREX_SPACEDIM);
     math_bcs = fetchBCArray(State_Type,Xvel,AMREX_SPACEDIM);
 
-    MOL::ExtrapVelToFaces( Umf,
-                           D_DECL(u_mac[0], u_mac[1], u_mac[2]),
-                           geom, math_bcs );
+
+        MOL::ExtrapVelToFaces( Umf,
+                               D_DECL(u_mac[0], u_mac[1], u_mac[2]),
+                               geom, m_bcrec_velocity );
 #else
     //
     // Non-EB version
@@ -1629,7 +1686,7 @@ NavierStokes::predict_velocity (Real  dt)
 
 	    // const Box& forcebx = grow(bx,1);
         // 	    tforces.resize(forcebx,AMREX_SPACEDIM);
-        getForce(forcing_term[U_mfi],gbx,1,Xvel,BL_SPACEDIM,prev_time,
+        getForce(forcing_term[U_mfi],gbx,Xvel,BL_SPACEDIM,prev_time,
             Ufab,Smf[U_mfi],scalGradFab[U_mfi],0);
 
             //
@@ -1653,8 +1710,8 @@ NavierStokes::predict_velocity (Real  dt)
 
     //velpred=1 only, use_minion=1, ppm_type, slope_order
     Godunov::ExtrapVelToFaces( Umf, forcing_term, AMREX_D_DECL(u_mac[0], u_mac[1], u_mac[2]),
-                               math_bcs, geom, dt, godunov_use_ppm,
-                               godunov_use_forces_in_trans );
+                               m_bcrec_velocity, m_bcrec_velocity_d.dataPtr(), geom, dt,
+			       godunov_use_ppm, godunov_use_forces_in_trans );
 
 #endif
 
@@ -1714,17 +1771,12 @@ NavierStokes::scalar_advection (Real dt,
     // Compute the advective forcing.
     //
     {
-        FillPatchIterator S_fpi(*this,visc_terms,godunov_hyp_grow,prev_time,State_Type,fscalar,num_scalars);
+        FillPatchIterator S_fpi(*this,visc_terms,godunov_hyp_grow+1,prev_time,State_Type,fscalar,num_scalars);
         MultiFab& Smf=S_fpi.get_mf();
 
         // Floor small values of states to be extrapolated
 	floor(Smf);
-    MultiFab& S_old = get_old_data(State_Type);
-    MultiFab SBorder(grids, dmap, NUM_STATE,godunov_hyp_grow+6,MFInfo(), Factory());
-    MultiFab::Copy(SBorder, S_old, 0, 0, NUM_STATE, S_old.nGrow());
-
-    MultiFab scalGradFab(grids, dmap, 3*nTrac, godunov_hyp_grow+4);
-    FillPatch(*this, SBorder, godunov_hyp_grow+6, prev_time, State_Type, 0, NUM_STATE);
+    MultiFab scalGradFab(grids, dmap, (AMREX_SPACEDIM+1)*nTrac, godunov_hyp_grow);
 
         FillPatchIterator U_fpi(*this,visc_terms,godunov_hyp_grow,prev_time,State_Type,Xvel,BL_SPACEDIM);
         const MultiFab& Umf=U_fpi.get_mf();
@@ -1756,11 +1808,12 @@ NavierStokes::scalar_advection (Real dt,
         Vector<BCRec> math_bcs(num_scalars);
         math_bcs = fetchBCArray(State_Type, fscalar, num_scalars);
 
-        MOL::ComputeAofs(*aofs, fscalar, num_scalars, Smf, 0,
-                         D_DECL(u_mac[0],u_mac[1],u_mac[2]),
-                         D_DECL(edgstate[0],edgstate[1],edgstate[2]), 0, false,
-                         D_DECL(cfluxes[0],cfluxes[1],cfluxes[2]), 0,
-                         math_bcs, geom  );
+
+                MOL::ComputeAofs(*aofs, fscalar, num_scalars, Smf, 0,
+                                 D_DECL(u_mac[0],u_mac[1],u_mac[2]),
+                                 D_DECL(edgstate[0],edgstate[1],edgstate[2]), 0, false,
+                                 D_DECL(cfluxes[0],cfluxes[1],cfluxes[2]), 0,
+                                 m_bcrec_scalars, m_bcrec_scalars_d.dataPtr(), geom  );
 
         if (do_reflux)
         {
@@ -1794,7 +1847,7 @@ NavierStokes::scalar_advection (Real dt,
             for(MFIter SGmfi(scalGradFab,true); SGmfi.isValid(); ++SGmfi)
             {
                 const Box& bx = SGmfi.tilebox();
-                computeScalarGradient(SBorder[SGmfi], scalGradFab[SGmfi], bx, dx, Smf.nComp());
+                computeScalarGradient(Smf[SGmfi], scalGradFab[SGmfi], bx, dx, Smf.nComp());
             }
             Vector<int> state_bc;
             FArrayBox tforces;
@@ -1810,7 +1863,7 @@ NavierStokes::scalar_advection (Real dt,
                 		// tforces.resize(forcebx,num_scalars);
         // getForce(tforces,bx,nGrowF,fscalar,num_scalars,prev_time,Umf[S_mfi],Smf[S_mfi], scalGradFab[S_mfi],0);
 
-                getForce(forcing_term[S_mfi],gbx,nGrowF,fscalar,num_scalars,
+                getForce(forcing_term[S_mfi],gbx,fscalar,num_scalars,
 			 prev_time,Umf[S_mfi],Smf[S_mfi],scalGradFab[S_mfi],0);
 
                 for (int n=0; n<num_scalars; ++n)
@@ -1857,13 +1910,13 @@ NavierStokes::scalar_advection (Real dt,
             iconserv[comp] = (advectionType[fscalar+comp] == Conservative) ? 1 : 0;
 	}
 
-        Godunov::ComputeAofs(*aofs, fscalar, num_scalars,
-                             Smf, 0,
-                             AMREX_D_DECL( u_mac[0], u_mac[1], u_mac[2] ),
-                             AMREX_D_DECL( edgestate[0], edgestate[1], edgestate[2] ), 0, false,
-                             AMREX_D_DECL( cfluxes[0], cfluxes[1], cfluxes[2] ), 0,
-                             forcing_term, 0, *divu_fp, math_bcs, geom, iconserv,
-                             dt, godunov_use_ppm, godunov_use_forces_in_trans, false );
+    Godunov::ComputeAofs(*aofs, fscalar, num_scalars,
+                         Smf, 0,
+                         AMREX_D_DECL( u_mac[0], u_mac[1], u_mac[2] ),
+                         AMREX_D_DECL( edgestate[0], edgestate[1], edgestate[2] ), 0, false,
+                         AMREX_D_DECL( cfluxes[0], cfluxes[1], cfluxes[2] ), 0,
+                         forcing_term, 0, *divu_fp, m_bcrec_scalars_d.dataPtr(),
+             geom, iconserv, dt, godunov_use_ppm, godunov_use_forces_in_trans, false );
 
         if (do_reflux)
         {
@@ -3536,31 +3589,25 @@ NavierStokes::calcViscosity (const Real time,
                           auto const& Trac3       = S_cc.array(mfi,Tracer3);
                       // }
                       auto const& mu      = visc.array(mfi);
-                      for(int i = lo.x; i <= hi.x; i++)
+                      amrex::ParallelFor(gbx, [mu, rho, Trac, Trac2, Trac3, muL, muG, muL2]
+                      AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                       {
-                          for(int j = lo.y; j <= hi.y; j++)
+                          if(nTrac == 3)
                           {
-                              for(int k = lo.z; k <= hi.z; k++)
-                              {
-                                  if(do_trac3)
-                                  {
-                                      mu(i,j,k) = muG*Trac(i,j,k,0) + muL*Trac2(i,j,k,0)
-                                        + muL2*Trac3(i,j,k,0);
-                                        // if(mu(i,j,k) < fmin(muL, fmin(muL2, muG))){ mu(i,j,k) = fmin(muL, fmin(muL2, muG)); }
-                                        // else if(mu(i,j,k) > fmax(muL, fmax(muL2, muG))) { mu(i,j,k) = fmax(muL, fmax(muL2, muG)); }
-
-                                  }
-                                  else
-                                  {
-                                      mu(i,j,k) = muL + (muG-muL)*Trac(i,j,k,0);
-                                      if(mu(i,j,k) < fmin(muL, muG)){ mu(i,j,k) = fmin(muL, muG); }
-                                      else if(mu(i,j,k) > fmax(muL, muG)) { mu(i,j,k) = fmax(muL, muG); }
-
-                                  }
-                              }
+                              mu(i,j,k) = muG*Trac(i,j,k,0) + muL*Trac2(i,j,k,0)
+                                + muL2*Trac3(i,j,k,0);
+                                // if(mu(i,j,k) < fmin(muL, fmin(muL2, muG))){ mu(i,j,k) = fmin(muL, fmin(muL2, muG)); }
+                                // else if(mu(i,j,k) > fmax(muL, fmax(muL2, muG))) { mu(i,j,k) = fmax(muL, fmax(muL2, muG)); }
 
                           }
-                      }
+                          else
+                          {
+                              mu(i,j,k) = muL + (muG-muL)*Trac(i,j,k,0);
+                              if(mu(i,j,k) < fmin(muL, muG)){ mu(i,j,k) = fmin(muL, muG); }
+                              else if(mu(i,j,k) > fmax(muL, muG)) { mu(i,j,k) = fmax(muL, muG); }
+
+                          }
+                      });
                     }
               // MultiFab::LinComb(*visc, 1.0, viscL, 0, (muG-muL), face_trac_fabs[dir], 0, 0, visc[dir]->nComp(), visc[dir]->nGrow());
 
@@ -3645,23 +3692,10 @@ NavierStokes::getViscosity (MultiFab* viscosity[BL_SPACEDIM],
                                              0, 0, 1, geom, math_bc);
       EB_set_covered_faces({D_DECL(viscosity[0],viscosity[1],viscosity[2])},0.0);
    #else
-    #ifdef _OPENMP
-    #pragma omp parallel if (Gpu::notInLaunchRegion())
-    #endif
-       for (MFIter mfi(*visc,TilingIfNotGPU()); mfi.isValid();++mfi)
-       {
-          for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
-          {
-             const Box ebx = mfi.nodaltilebox(dir);
-             const Box& edomain = amrex::surroundingNodes(domain,dir);
-             const auto& visc_c  = (*visc)[mfi];
-             auto& visc_ed = (*viscosity[dir])[mfi];
 
-             center_to_edge_plain(visc_c, visc_ed, ebx,0,0, viscosity[dir]->nComp());
-         }
-        }
-
-    #endif
+      average_cellcenter_to_face(Array<MultiFab*,AMREX_SPACEDIM>{
+          {AMREX_D_DECL(viscosity[0],viscosity[1],viscosity[2])}},*visc,geom);
+   #endif
     }
     else
     {
@@ -3719,51 +3753,4 @@ NavierStokes::getDiffusivity (MultiFab* diffusivity[BL_SPACEDIM],
     {
       diffusivity[dir]->setVal(visc_coef[state_comp], dst_comp, ncomp, diffusivity[dir]->nGrow());
     }
-}
-
-
-void
-NavierStokes::center_to_edge_plain (const FArrayBox& ccfab,
-                                    FArrayBox&       ecfab,
-				    const Box&       bx,
-                                    int              sComp,
-                                    int              dComp,
-                                    int              nComp)
-{
-    //
-    // This routine fills an edge-centered FAB from a cell-centered FAB.
-    // It assumes that the data in all cells of the cell-centered FAB is
-    // valid and totally ignores any concept of boundary conditions.
-    // It is assummed that the cell-centered FAB fully contains the
-    // edge-centered FAB.  If anything special needs to be done at boundaries,
-    // a varient of this routine needs to be written.  See
-    // HeatTransfer::center_to_edge_fancy().
-    //
-    const Box&      ccbox = ccfab.box();
-    const IndexType ixt   = ecfab.box().ixType();
-    //
-    // Get direction for interpolation to edges
-    //
-    int dir = -1;
-    for (int d = 0; d < BL_SPACEDIM; d++)
-        if (ixt.test(d))
-            dir = d;
-    //
-    // Miscellanious checks
-    //
-    BL_ASSERT(!(ixt.cellCentered()) && !(ixt.nodeCentered()));
-    BL_ASSERT(grow(ccbox,-BASISV(dir)).contains(enclosedCells(bx)));
-    BL_ASSERT(sComp+nComp <= ccfab.nComp() && dComp+nComp <= ecfab.nComp());
-
-    //
-    // Shift cell-centered data to edges
-    //
-    const int isharm = def_harm_avg_cen2edge;
-
-    cen2edg(bx.loVect(), bx.hiVect(),
-	    ARLIM(ccfab.loVect()), ARLIM(ccfab.hiVect()),
-	    ccfab.dataPtr(sComp),
-	    ARLIM(ecfab.loVect()), ARLIM(ecfab.hiVect()),
-	    ecfab.dataPtr(dComp),
-	    &nComp, &dir, &isharm);
 }
