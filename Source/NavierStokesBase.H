@@ -744,6 +744,9 @@ public:
     static amrex::Real        visc_tol;
     static amrex::Real        visc_abs_tol;
     static amrex::Real        be_cn_theta;
+    static amrex::Real        muL;
+    static amrex::Real        muG;
+    static amrex::Real        muL2;
     //
     // Internal switches.
     //
@@ -754,6 +757,7 @@ public:
     static int  Temp;
     static int  do_trac2;
     static int  do_trac3;
+    static int  do_variable_visc;
     static int  do_temp;
     static int  do_cons_trac;
     static int  do_cons_trac2;

@@ -3538,16 +3538,6 @@ NavierStokes::calcViscosity (const Real time,
                              const int  /*iteration*/,
                              const int  /*ncycle*/)
 {
-    double muG = 0.0;
-    double muL = 0.0;
-    double muL2 = 0.0;
-    int do_variable_visc = 0;
-    int do_three_fluid = 0;
-    ParmParse pp("ns");
-    pp.query("muG", muG);
-    pp.query("muL", muL);
-    pp.query("muL2", muL2);
-    pp.query("do_variable_visc", do_variable_visc);
     if (is_diffusive[Xvel])
     {
         if (visc_coef[Xvel] >= 0.0)
@@ -3560,13 +3550,6 @@ NavierStokes::calcViscosity (const Real time,
 
             FillPatchIterator fpi(*this,S,1,time,State_Type,0,S.nComp());
             MultiFab& S_cc = fpi.get_mf();
-            MultiFab viscL(visc, amrex::make_alias, 0, visc.nComp());
-            MultiFab trac_fab;
-            trac_fab.define(grids, dmap, 1, S.nGrow());
-            MultiFab::Copy(trac_fab, S, Tracer, 0, 1, S.nGrow());
-            trac_fab.FillBoundary(geom.periodicity());
-            trac_fab.mult((muG-muL), 0, trac_fab.nComp(), trac_fab.nGrow());
-            viscL.setVal(muL);
 
             if(do_variable_visc)
             {
@@ -3589,7 +3572,7 @@ NavierStokes::calcViscosity (const Real time,
                           auto const& Trac3       = S_cc.array(mfi,Tracer3);
                       // }
                       auto const& mu      = visc.array(mfi);
-                      amrex::ParallelFor(gbx, [mu, rho, Trac, Trac2, Trac3, muL, muG, muL2]
+                      amrex::ParallelFor(gbx, [mu, rho, Trac, Trac2, Trac3]
                       AMREX_GPU_DEVICE(int i, int j, int k) noexcept
                       {
                           if(nTrac == 3)

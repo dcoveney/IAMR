@@ -87,6 +87,9 @@ Vector<Real> NavierStokesBase::visc_coef;
 Real        NavierStokesBase::visc_tol           = 1.0e-10;
 Real        NavierStokesBase::visc_abs_tol       = 1.0e-10;
 Real        NavierStokesBase::be_cn_theta        = 0.5;
+Real        NavierStokesBase::muG                = 0.0;
+Real        NavierStokesBase::muL                = 0.0;
+Real        NavierStokesBase::muL2               = 0.0;
 
 int         NavierStokesBase::Tracer                    = -1;
 int         NavierStokesBase::Tracer2                   = -1;
@@ -95,6 +98,7 @@ int         NavierStokesBase::nTrac                     = -1;
 int         NavierStokesBase::Temp                      = -1;
 int         NavierStokesBase::do_trac2                  = 0;
 int         NavierStokesBase::do_trac3                  = 0;
+int         NavierStokesBase::do_variable_visc          = 0;
 int         NavierStokesBase::do_temp                   = 0;
 int         NavierStokesBase::do_cons_trac              = 0;
 int         NavierStokesBase::do_cons_trac2             = 0;
@@ -678,8 +682,11 @@ NavierStokesBase::Initialize_specific ()
     //
     Vector<Real> scal_diff_coefs(n_scal_diff_coefs);
     pp.getarr("scal_diff_coefs",scal_diff_coefs,0,n_scal_diff_coefs);
+    pp.query("do_variable_visc", do_variable_visc);
 
-
+    pp.query("muG", muG);
+    pp.query("muL", muL);
+    pp.query("muL2", muL2);
     int scalId = Density;
 
     // Will need to add more lines when more variables are added
