@@ -32,7 +32,7 @@ ns.do_vorticity_ref = 1
 ns.do_denminmax = 1
 ns.do_scalminmax = 1
 ns.do_trac2  = 1
-ns.do_trac3  = 1
+ns.do_trac3  = 0
 ns.getForceVerbose = 0
 
 #*******************************************************************************
@@ -110,7 +110,7 @@ ns.vel_visc_coef        = 0.001
 #*******************************************************************************
 
 # Diffusion coefficient for first scalar
-ns.scal_diff_coefs      = 0.0 0.0 0.0
+ns.scal_diff_coefs      = 0.0 0.0
 #ns.scal_diff_coefs      = 0.
 #ns.init_dt 		= 0.0002
 
@@ -183,8 +183,8 @@ mac_proj.bottom_solver = hypre
 mac_proj.bottom_rtol = 1.e-4
 #mac_proj.bottom_maxiter = 1
 
-#hypre.hypre_preconditioner = BoomerAMG
-#hypre.hypre_solver 	   = GMRES
+hypre.hypre_preconditioner = BoomerAMG
+hypre.hypre_solver 	   = GMRES
 
 max_coarsening_level = 100
 #max_coarsening_level = 0
