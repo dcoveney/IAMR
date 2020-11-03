@@ -22,7 +22,7 @@ fabarray.mfiter_tile_size = 8 8 8
 
 # Maximum number of coarse grid timesteps to be taken, if stop_time is
 #  not reached first.
-max_step 		= -1
+max_step 		= 1
 # Time at which calculation stops, if max_step is not reached first.
 stop_time 		= 0.025
 
@@ -162,9 +162,9 @@ ns.hi_bc             = 4 4
 #*******************************************************************************
 
 # For solver reasons, use multigrid iterations as the bottom solve.
-mac.mac_tol   = 1.0e-6
-proj.proj_tol = 1.0e-6
-proj.abs_tol  = 1.0e-6
+mac.mac_tol   = 1.0e-7
+proj.proj_tol = 1.0e-8
+proj.abs_tol  = 1.0e-8
 
 mac.use_hypre = 1
 mac.hypre_verbose = 4
@@ -183,6 +183,8 @@ mac_proj.bottom_solver = hypre
 mac_proj.bottom_rtol = 1.e-4
 #mac_proj.bottom_maxiter = 1
 
+#hypre.hypre_preconditioner = BoomerAMG
+#hypre.hypre_solver 	   = GMRES
 
 max_coarsening_level = 100
 #max_coarsening_level = 0
