@@ -3655,9 +3655,6 @@ void
 NavierStokes::getViscosity (MultiFab* viscosity[BL_SPACEDIM],
                             const Real time)
 {
-    ParmParse pp("ns");
-    int do_variable_visc = 0;
-    pp.query("do_variable_visc", do_variable_visc);
 
     // //
     // // Select time level to work with (N or N+1)
