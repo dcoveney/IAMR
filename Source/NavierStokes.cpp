@@ -101,15 +101,16 @@ NavierStokes::initData ()
 
     solitonInit = readDataFile();
 #ifdef _OPENMP
-#pragma omp parallel
+#pragma omp parallel  if (Gpu::notInLaunchRegion())
 #endif
-    for (MFIter snewmfi(S_new,true); snewmfi.isValid(); ++snewmfi)
+    for (MFIter snewmfi(S_new,TilingIfNotGPU()); snewmfi.isValid(); ++snewmfi)
     {
         const Box& vbx = snewmfi.tilebox();
 
         FArrayBox& Sfab = S_new[snewmfi];
         FArrayBox& Pfab = P_new[snewmfi];
 
+	//fixme -- change to GPU once initdata is updated
         Sfab.setVal<RunOn::Host>(0.0,snewmfi.growntilebox(),0,S_new.nComp());
         Pfab.setVal<RunOn::Host>(0.0,snewmfi.grownnodaltilebox(-1,P_new.nGrow()));
 
@@ -1701,12 +1702,10 @@ NavierStokes::predict_velocity (Real  dt)
             AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
             {
                 tf(i,j,k,n) = ( tf(i,j,k,n) + visc(i,j,k,n) - gp(i,j,k,n) ) / rho(i,j,k);
+
             });
         }
     }
-
-    Vector<BCRec> math_bcs(AMREX_SPACEDIM);
-    math_bcs = fetchBCArray(State_Type,Xvel,AMREX_SPACEDIM);
 
     //velpred=1 only, use_minion=1, ppm_type, slope_order
     Godunov::ExtrapVelToFaces( Umf, forcing_term, AMREX_D_DECL(u_mac[0], u_mac[1], u_mac[2]),
@@ -1789,10 +1788,6 @@ NavierStokes::scalar_advection (Real dt,
         //////////////////////////////////////////////////////////////////////////////
 
         const Box& domain = geom.Domain();
-
-        Vector<BCRec> math_bc(num_scalars);
-        math_bc = fetchBCArray(State_Type,fscalar,num_scalars);
-
 
         MultiFab cfluxes[AMREX_SPACEDIM];
         MultiFab edgstate[AMREX_SPACEDIM];
@@ -1899,16 +1894,14 @@ NavierStokes::scalar_advection (Real dt,
             }
         }
 
-
-        Vector<BCRec> math_bcs(num_scalars);
-        math_bcs = fetchBCArray(State_Type, fscalar, num_scalars);
-
         amrex::Gpu::DeviceVector<int> iconserv;
         iconserv.resize(num_scalars, 0);
+	// does this actually put data in GPU memory?
         for (int comp = 0; comp < num_scalars; ++comp)
         {
             iconserv[comp] = (advectionType[fscalar+comp] == Conservative) ? 1 : 0;
 	}
+
 
     Godunov::ComputeAofs(*aofs, fscalar, num_scalars,
                          Smf, 0,
@@ -2096,17 +2089,27 @@ NavierStokes::scalar_diffusion_update (Real dt,
 
 	    for (MFIter fmfi(*fluxn[d]); fmfi.isValid(); ++fmfi)
 	    {
-	      const Box& ebox = (*fluxn[d])[fmfi].box();//fmfi.tilebox();
+	      const Box& ebox = (*fluxn[d])[fmfi].box();
 
 	      fluxtot.resize(ebox,1);
-	      fluxtot.copy<RunOn::Host>((*fluxn[d])[fmfi],ebox,0,ebox,0,1);
-	      fluxtot.plus<RunOn::Host>((*fluxnp1[d])[fmfi],ebox,0,0,1);
+	      Elixir fdata_i = fluxtot.elixir();
+
+	      auto const& ftot = fluxtot.array();
+	      auto const& fn   = fluxn[d]->array(fmfi);
+	      auto const& fnp1 = fluxnp1[d]->array(fmfi);
+
+	      amrex::ParallelFor(ebox, [ftot, fn, fnp1 ]
+	      AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+	      {
+		ftot(i,j,k) = fn(i,j,k) + fnp1(i,j,k);
+	      });
 
 	      if (level < parent->finestLevel())
-		fluxes[fmfi].copy<RunOn::Host>(fluxtot);
+		fluxes[fmfi].copy<RunOn::Gpu>(fluxtot);
 
+	      //fixme - not sure what FineAdd does exactly, presumable okay wo sync here
 	      if (level > 0)
-		getViscFluxReg().FineAdd(fluxtot,d,fmfi.index(),0,sigma,1,dt,RunOn::Host);
+		getViscFluxReg().FineAdd(fluxtot,d,fmfi.index(),0,sigma,1,dt,RunOn::Gpu);
 	    }
 
 	    if (level < parent->finestLevel())
