@@ -1,0 +1,40 @@
+=== If no file names and line numbers are shown below, one can run
+            addr2line -Cpfie my_exefile my_line_address
+    to convert `my_line_address` (e.g., 0x4a6b) into file name and line number.
+    Or one can use amrex/Tools/Backtrace/parse_bt.py.
+
+=== Please note that the line number reported by addr2line may not be accurate.
+    One can use
+            readelf -wl my_exefile | grep my_line_address'
+    to find out the offset for that line.
+
+ 0: ./amr2d.gnu.MPI.ex(+0x24e904) [0x55bf4b9ab904]
+    amrex::BLBackTrace::print_backtrace_info(_IO_FILE*) at /home/cdt1903/IAMR/Exec/dambreakEB/../../../amrex/Src/Base/AMReX_BLBackTrace.cpp:174
+
+ 1: ./amr2d.gnu.MPI.ex(+0x25089f) [0x55bf4b9ad89f]
+    amrex::BLBackTrace::handler(int) at /home/cdt1903/IAMR/Exec/dambreakEB/../../../amrex/Src/Base/AMReX_BLBackTrace.cpp:80
+
+ 2: ./amr2d.gnu.MPI.ex(+0x1698dd) [0x55bf4b8c68dd]
+    ?? ??:0
+
+ 3: ./amr2d.gnu.MPI.ex(+0x199268) [0x55bf4b8f6268]
+    amrex::ParallelDescriptor::ReadAndBcastFile(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, amrex::Vector<char, std::allocator<char> >&, bool, ompi_communicator_t* const&) at /home/cdt1903/IAMR/Exec/dambreakEB/../../../amrex/Src/Base/AMReX_ParallelDescriptor.cpp:2114
+
+ 4: ./amr2d.gnu.MPI.ex(+0x163038) [0x55bf4b8c0038]
+    amrex::(anonymous namespace)::read_file(char const*, std::__cxx11::list<amrex::ParmParse::PP_entry, std::allocator<amrex::ParmParse::PP_entry> >&) at /home/cdt1903/IAMR/Exec/dambreakEB/../../../amrex/Src/Base/AMReX_ParmParse.cpp:475
+
+ 5: ./amr2d.gnu.MPI.ex(+0x1637c6) [0x55bf4b8c07c6]
+    amrex::ParmParse::Initialize(int, char**, char const*) at /home/cdt1903/IAMR/Exec/dambreakEB/../../../amrex/Src/Base/AMReX_ParmParse.cpp:891
+ (inlined by) amrex::ParmParse::Initialize(int, char**, char const*) at /home/cdt1903/IAMR/Exec/dambreakEB/../../../amrex/Src/Base/AMReX_ParmParse.cpp:1078
+
+ 6: ./amr2d.gnu.MPI.ex(+0x151e80) [0x55bf4b8aee80]
+    amrex::Initialize(int&, char**&, bool, ompi_communicator_t*, std::function<void ()> const&, std::ostream&, std::ostream&, void (*)(char const*)) at /home/cdt1903/IAMR/Exec/dambreakEB/../../../amrex/Src/Base/AMReX.cpp:410
+
+ 7: ./amr2d.gnu.MPI.ex(+0x153b3) [0x55bf4b7723b3]
+    ?? ??:0
+
+ 8: /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xe7) [0x7fd8cd718b97]
+
+ 9: ./amr2d.gnu.MPI.ex(+0x1b77a) [0x55bf4b77877a]
+    ?? ??:0
+

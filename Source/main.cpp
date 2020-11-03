@@ -78,7 +78,7 @@ main (int   argc,
 
     // HACK HACK HACK
     // Need to set number of grow cells to 8 not 4
-    AmrLevel::SetEBMaxGrowCells(5,5,5);
+    AmrLevel::SetEBMaxGrowCells(10,10,10);
 
     //decide who should own max_coasening_level later
     int max_coarsening_level = 100;
