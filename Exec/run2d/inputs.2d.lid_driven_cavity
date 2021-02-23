@@ -21,7 +21,7 @@ ns.init_dt              = 0.0140625
 #*******************************************************************************
 
 # Number of cells in each coordinate direction at the coarsest level
-amr.n_cell			= 64 64
+amr.n_cell			= 128 128
 #amr.max_grid_size		= 32
 
 #*******************************************************************************
@@ -62,7 +62,7 @@ ns.init_shrink          = 0.3  # factor which multiplies the very first time ste
 #*******************************************************************************
 
 # Viscosity coefficient 
-ns.vel_visc_coef        = 0.001
+ns.vel_visc_coef        = 0.01
 
 #*******************************************************************************
 

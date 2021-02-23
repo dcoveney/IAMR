@@ -43,10 +43,10 @@ endif
 Ppack   += $(foreach dir, $(Pdirs), $(AMREX_HOME)/Src/$(dir)/Make.package)
 include $(Ppack)
 
-ifeq ($(USE_VELOCITY), TRUE)
-  DEFINES += -DBL_NOLINEVALUES -DBL_USE_VELOCITY -DBL_PARALLEL_IO
-  include $(AMREX_HOME)/Src/Extern/amrdata/Make.package
-endif
+
+
+ include $(AMREX_HOME)/Src/Extern/amrdata/Make.package
+
 
 # job_info support
 CEXE_sources += AMReX_buildInfo.cpp

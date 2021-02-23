@@ -1,8 +1,8 @@
 #¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨#
 #            SIMULATION STOP            #
 #.......................................#
-stop_time               =   120.0         # Max (simulated) time to evolve
-max_step                =  0        # Max number of time steps
+stop_time               =   -1 # 0.1         # Max (simulated) time to evolve
+max_step                =   3000        # Max number of time steps
 #verbose                 =   5
 #steady_state            =   0           # Steady-state solver?
 
@@ -19,30 +19,30 @@ ns.testNumber 	= 27
 #.......................................#
 #incflo.fixed_dt         =   -1.0        # Use this constant dt if > 0
 #ns.cfl              =   0.45             # CFL factor
-ns.cfl               = 0.6
+ns.cfl               = 0.5
 #¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨#
 #            INPUT AND OUTPUT           #
 #.......................................#
 amr.plot_int            =   100          # Steps between plot files
 # amr.plot_per            =   0.1         # Steps between plot files
-amr.check_int           =   50        # Steps between checkpoint files
+amr.check_int           =   1000        # Steps between checkpoint files
 amr.derive_plot_vars    =   mag_vort avg_pressure gradpx gradpy
-# amr.restart             =   chk01050          # Checkpoint to restart from
-amr.probin_file         = probin.2d.flow_past_cylinder-x
-amr.v 			= 2
+# amr.restart             =   chk01000          # Checkpoint to restart from
+amr.probin_file         = probin.2d.laminar_plate
+
 #¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨#
 #               PHYSICS                 #
 #.......................................#
-ns.gravity          =   0.  0.  0.  # Gravitational force (3D)
+ns.gravity          =   0.  1.0  0.  # Gravitational force (3D)
 #incflo.ro_0             =   1.          # Reference density
 
-ns.vel_visc_coef         = 0.01
+ns.vel_visc_coef         = 7.0e-4
 ns.scal_diff_coefs       = 0.0
 
 #¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨#
 #        ADAPTIVE MESH REFINEMENT       #
 #.......................................#
-amr.n_cell              =   1024 512 32    # Grid cells at coarsest AMRlevel
+amr.n_cell              =   512 512 32    # Grid cells at coarsest AMRlevel
 amr.max_level           =   0           # Max AMR level in hierarchy
 amr.grid_eff            =   0.7
 amr.n_error_buf         =   8
@@ -53,24 +53,25 @@ amr.max_grid_size_z     =   1024
 #¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨#
 #              GEOMETRY                 #
 #.......................................#
-geometry.prob_lo     =  -10.0 -10.0 0.0
-geometry.prob_hi     =   30.0 10.0  1.0
-geometry.is_periodic    =   0   1   1   # Periodicity x y z (0/1)
+geometry.prob_lo     =  -0.2 0.0 0.0
+geometry.prob_hi     =  0.5  0.7  1.0
+
+geometry.is_periodic    =   0   0   0   # Periodicity x y z (0/1)
 geometry.coord_sys      = 0
 
 # 0 = Interior/Periodic  3 = Symmetry
 # 1 = Inflow             4 = SlipWall
 # 2 = Outflow            5 = NoSlipWal
 # Boundary conditions on the low end of the domain.
-ns.lo_bc 	     	= 1 0 0
+ns.lo_bc 	     	= 1 5 0
 # Boundary conditions on the high end of the domain.
-ns.hi_bc   	     	= 2 0 0
+ns.hi_bc   	     	= 2 2 0
 
 # Add cylinder
-eb2.geom_type               = sphere
-eb2.sphere_radius         = 0.5
-eb2.sphere_center         = 0.0  0.0
-eb2.sphere_has_fluid_inside=1
+eb2.geom_type    =  all_regular
+# eb2.box_lo = -0.05 -0.05
+# eb2.box_hi = 2.05 0.05
+# eb2.box_has_fluid_inside = 0
 
 #¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨#
 #           INITIAL CONDITIONS          #
@@ -90,5 +91,5 @@ mac.verbose             = 0 # MacProjector
 #diffusion.verbose       =   1           # Diffusion operator
 projection.verbose   =   1           # Nodal projection
 projection.mg_verbose=   0
-# projection.mg_rtol   =  1.0e-13
+projection.mg_rtol   =  1.0e-13
 #amr.plt_ccse_regtest    =   1

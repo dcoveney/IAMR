@@ -1,0 +1,58 @@
+# ------------------  INPUTS TO MAIN PROGRAM  -------------------
+max_step = 35000
+stop_time = -1 # 0.1
+# PROBLEM SIZE & GEOMETRY
+geometry.is_periodic =  0  0
+geometry.coord_sys   =  0       # 0 => cart
+geometry.prob_lo     =  -1.0 0.0 0.0
+geometry.prob_hi     =   1.0 4.0  1.0
+amr.n_cell           =  256  512   64
+
+# Boundary conditions on the low end of the domain.
+ns.lo_bc 	     	= 5 5 0
+# Boundary conditions on the high end of the domain.
+ns.hi_bc   	     	= 5 5 0
+
+ns.do_rigid 	= 1
+eb2.geom_type	= "triangle-cavity"
+eb2.point1	= -0.001 -0.004
+eb2.normal1    = 1.0 -0.25
+eb2.point2	= 0.001 -0.004
+eb2.normal2    = 1.0 0.25
+eb2.point3	= 0.0 4.0
+eb2.normal3    = 0.0 -1.0
+ns.init_dt              = 0.00140625  
+# TIME STEP CONTROL
+ns.cfl            = 0.5     # cfl number for hyperbolic system
+
+# VERBOSITY
+adv.v              = 1       # verbosity in Adv
+amr.v              = 2       # verbosity in Amr
+#amr.grid_log         = grdlog  # name of grid logging file
+ns.scal_diff_coefs       = 0.0 0.0
+# REFINEMENT / REGRIDDING
+amr.max_level       = 0       # maximum level number allowed
+amr.ref_ratio       = 2 2 2 2 # refinement ratio
+amr.regrid_int      = 2       # how often to regrid
+amr.blocking_factor = 8       # block factor in grid generation
+amr.max_grid_size   = 16
+ amr.restart	    = chk31800
+ns.rigid_plotfile	= "volfracPlot"
+# CHECKPOINT FILES
+amr.checkpoint_files_output = 1     # 0 will disable checkpoint files
+amr.check_file              = chk   # root name of checkpoint file
+amr.check_int               = 200    # number of timesteps between checkpoints
+amr.derive_plot_vars    =   mag_vort avg_pressure gradpx gradpy
+# PLOTFILES
+amr.plot_files_output = 1      # 0 will disable plot files
+amr.plot_file         = plt    # root name of plot file
+amr.plot_int          = 1000     # number of timesteps between plot files
+ns.testNumber       = 31
+ns.vel_visc_coef    = 0.01
+
+# PROBIN FILENAME
+amr.probin_file         = probin.2d.lid_driven_cavity
+
+
+# TRACER PARTICLES
+adv.do_tracers = 0

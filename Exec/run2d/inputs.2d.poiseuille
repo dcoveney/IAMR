@@ -23,13 +23,13 @@ ns.steady_tol 		= 1.0e-5
 #*******************************************************************************
 
 # Number of cells in each coordinate direction at the coarsest level
-amr.n_cell 			= 128 64  
+amr.n_cell 			= 256 128  
 amr.max_grid_size		= 16
 
 #*******************************************************************************
 
 # Maximum level (defaults to 0 for single level calculation)
-amr.max_level			= 2 # maximum number of levels of refinement
+amr.max_level			= 0 # maximum number of levels of refinement
 
 ns.do_tracer_ref = 1
 mg.v = 0
@@ -113,7 +113,7 @@ geometry.is_periodic 	=  0 0
 ns.lo_bc             	= 1 5 
 
 # Boundary conditions on the high end of the domain.
-ns.hi_bc             	= 2 5   
+ns.hi_bc             	= 2 2   
 
 # 0 = Interior/Periodic  3 = Symmetry
 # 1 = Inflow             4 = SlipWall

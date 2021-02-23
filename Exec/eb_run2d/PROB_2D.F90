@@ -1606,6 +1606,89 @@ contains
 
       end subroutine FORT_ADV2FILL
 
+
+
+      subroutine FORT_ADV3FILL (adv,DIMS(adv),domlo,domhi,dx,xlo,time,bc)&
+                                bind(C, name="FORT_ADV3FILL")
+
+      integer    DIMDEC(adv)
+      integer    domlo(SDIM), domhi(SDIM)
+      REAL_T     dx(SDIM), xlo(SDIM), time, y
+      REAL_T     adv(DIMV(adv))
+      integer    bc(SDIM,2)
+      integer    lo(SDIM),hi(SDIM)
+
+      integer    i, j
+
+#include <probdata.H>
+	  lo(1) = ARG_L1(adv)
+      lo(2) = ARG_L2(adv)
+      hi(1) = ARG_H1(adv)
+      hi(2) = ARG_H2(adv)
+      call filcc(adv,DIMS(adv),domlo,domhi,dx,xlo,bc)
+
+!	  if(probtype.eq.20 .and.ARG_H1(adv).gt.domhi(1)) then
+!		 do i = domhi(1), ARG_H1(adv)
+!           do j = ARG_L2(adv), ARG_H2(adv)
+!                y = xlo(2) + dx(2)*(float(j-lo(2)) + half)
+!                if(y.le.0.06 .and. y.ge.0.04) then
+!					adv(i,j) = one
+!				end if
+!           end do
+!         end do
+!      end if
+!	      if (bc(1,1).eq.EXT_DIR.and.ARG_L1(adv).lt.domlo(1)) then
+!         do i = ARG_L1(adv), domlo(1)-1
+!            do j = ARG_L2(adv), ARG_H2(adv)
+!               adv(i,j) = zero
+!            end do
+!         end do
+!      end if  
+      if (bc(1,1).eq.EXT_DIR.and.ARG_L1(adv).lt.domlo(1)) then
+         do i = ARG_L1(adv), domlo(1)-1
+            do j = ARG_L2(adv), ARG_H2(adv)
+				if(probtype .eq. 22) then
+                y = xlo(2) + dx(2)*(float(j-lo(2)) + half)
+                if(y.le.0.925 .and. y.gt.0.90) then
+					adv(i,j) = one
+				else
+					adv(i,j) = adv(domlo(1),j)
+				end if
+				end if            
+			end do
+         end do
+      end if           
+
+      if (bc(1,2).eq.EXT_DIR.and.ARG_H1(adv).gt.domhi(1)) then
+         do i = domhi(1)+1, ARG_H1(adv)
+            do j = ARG_L2(adv), ARG_H2(adv)
+               adv(i,j) = zero
+            end do
+         end do
+
+      end if                
+
+      if (bc(2,1).eq.EXT_DIR.and.ARG_L2(adv).lt.domlo(2)) then
+
+         do j = ARG_L2(adv), domlo(2)-1
+            do i = ARG_L1(adv), ARG_H1(adv)
+               adv(i,j) = zero
+            end do
+         end do
+
+      end if            
+
+      if (bc(2,2).eq.EXT_DIR.and.ARG_H2(adv).gt.domhi(2)) then
+         do j = domhi(2)+1, ARG_H2(adv)
+            do i = ARG_L1(adv), ARG_H1(adv)
+               adv(i,j) = zero
+            end do
+         end do
+      end if            
+
+      end subroutine FORT_ADV3FILL
+
+
 !c ::: -----------------------------------------------------------
 !c ::: This routine is called during a filpatch operation when
 !c ::: the patch to be filled falls outside the interior
@@ -1713,6 +1796,7 @@ contains
       integer    domlo(SDIM), domhi(SDIM)
       REAL_T     dx(SDIM), xlo(SDIM), time
       REAL_T     u(DIMV(u)), x_vel
+      REAL_T     x, pi, theta
       integer    lo(SDIM),hi(SDIM), bc(SDIM,2), i, j
 
 #ifdef BL_DO_FLCT
@@ -1753,6 +1837,8 @@ contains
          call INFL_FILL(FLCT_XVEL,DIMS(uflct),uflct,xlo,dx,t_flct,bc,f_problo,f_probhi)
       end if
 #endif
+      pi = 4.0*ATAN(1.0d0)
+      theta = 5.0*(pi/180.0d0)
 
       if (adv_dir .eq. 1)then
          x_vel = adv_vel
@@ -1781,18 +1867,29 @@ contains
       if (bc(2,1).eq.EXT_DIR.and.ARG_L2(u).lt.domlo(2)) then
          do j = ARG_L2(u), domlo(2)-1
             do i = ARG_L1(u), ARG_H1(u)
+               if(probtype.eq.5) then
+                  x = xlo(1) + dx(1)*(float(i-lo(1)) + half)
+                  if(x < 0.0) then
+                     u(i,j) = u(i,domlo(2))
+                  else
+                     u(i,j) = zero
+                  end if
+               else if(probtype.eq.6) then 
+                  u(i,j) = x_vel*cos(theta)
+               else
+                  u(i,j) = zero
+               end if
+               
 #ifdef BL_DO_FLCT
                if (forceLo .and. adv_dir .eq. 2) then
                   u(i,j) = zero + uflct(i,1)*turb_scale
                else
                   u(i,j) = zero
                end if
-#else
-               u(i,j) = zero
 #endif
             end do
          end do
-      end if            
+      end if  
 
       if (bc(2,2).eq.EXT_DIR.and.ARG_H2(u).gt.domhi(2)) then
          do j = domhi(2)+1, ARG_H2(u)
@@ -1850,7 +1947,7 @@ contains
       REAL_T     y_vel
       integer    lo(SDIM),hi(SDIM)
 
-      REAL_T  x
+      REAL_T  x, pi, theta
 
 #ifdef BL_DO_FLCT
       integer loFlctArray(SDIM), hiFlctArray(SDIM)
@@ -1885,7 +1982,8 @@ contains
          call INFL_FILL(FLCT_YVEL,DIMS(vflct),vflct,xlo,dx,t_flct,bc,f_problo,f_probhi)
       end if
 #endif
-
+      pi = 4.0*ATAN(1.0d0)
+      theta = 5.0*(pi/180.0d0)
       if (adv_dir .eq. 2) then
          y_vel = adv_vel
       else  
@@ -1897,8 +1995,12 @@ contains
       if (bc(1,1).eq.EXT_DIR.and.ARG_L1(v).lt.domlo(1)) then
          do i = ARG_L1(v), domlo(1)-1
            do j = ARG_L2(v),ARG_H2(v)
-             v(i,j) = zero
-           end do
+            if(probtype.eq.6) then
+               v(i,j) = y_vel*sin(theta)
+            else
+               v(i,j) = zero
+            end if
+            end do
          end do
       end if            
 

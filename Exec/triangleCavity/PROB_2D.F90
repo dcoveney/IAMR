@@ -1796,7 +1796,7 @@ integer    DIMDEC(u)
 integer    domlo(SDIM), domhi(SDIM)
 REAL_T     dx(SDIM), xlo(SDIM), time
 REAL_T     u(DIMV(u)), x_vel
-REAL_T     x, pi, theta, y
+REAL_T     x, pi, theta
 integer    lo(SDIM),hi(SDIM), bc(SDIM,2), i, j
 
 #ifdef BL_DO_FLCT
@@ -1851,20 +1851,7 @@ call filcc(u,DIMS(u),domlo,domhi,dx,xlo,bc)
 if (bc(1,1).eq.EXT_DIR.and.ARG_L1(u).lt.domlo(1)) then
 do i = ARG_L1(u), domlo(1)-1
 do j = ARG_L2(u), ARG_H2(u)
-   if(probtype.eq.4) then
-      y = xlo(2) + dx(2)*(float(j-lo(2)) + half)
-      if(time < 2.0) then
-         if(y > 0) then
-            u(i,j) = 1.0
-         else 
-            u(i,j) = 1.0
-         end if
-      else 
-         u(i,j) = 1.0
-      end if
-   else
-      u(i,j) = x_vel
-   end if
+u(i,j) = x_vel
 end do
 end do
 end if            

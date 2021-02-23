@@ -1788,22 +1788,22 @@ contains
 !c ::: -----------------------------------------------------------
 
       subroutine FORT_XVELFILL (u,DIMS(u),domlo,domhi,dx,xlo,time,bc)&
-         bind(C, name="FORT_XVELFILL")
+                                bind(C, name="FORT_XVELFILL")
 
-implicit none
+      implicit none
 
-integer    DIMDEC(u)
-integer    domlo(SDIM), domhi(SDIM)
-REAL_T     dx(SDIM), xlo(SDIM), time
-REAL_T     u(DIMV(u)), x_vel
-REAL_T     x, pi, theta, y
-integer    lo(SDIM),hi(SDIM), bc(SDIM,2), i, j
+      integer    DIMDEC(u)
+      integer    domlo(SDIM), domhi(SDIM)
+      REAL_T     dx(SDIM), xlo(SDIM), time
+      REAL_T     u(DIMV(u)), x_vel
+      REAL_T     x, pi, theta
+      integer    lo(SDIM),hi(SDIM), bc(SDIM,2), i, j
 
 #ifdef BL_DO_FLCT
-integer loFlctArray(SDIM), hiFlctArray(SDIM)
-integer DIMDEC(uflct)
-REAL_T  t_flct
-REAL_T, allocatable :: uflct(:,:)
+      integer loFlctArray(SDIM), hiFlctArray(SDIM)
+      integer DIMDEC(uflct)
+      REAL_T  t_flct
+      REAL_T, allocatable :: uflct(:,:)
 #endif
 
 #include <probdata.H>
@@ -1812,117 +1812,104 @@ REAL_T, allocatable :: uflct(:,:)
 #include <INFL_FORCE_F.H>
 #endif
 
-lo(1) = ARG_L1(u)
-lo(2) = ARG_L2(u)
-hi(1) = ARG_H1(u)
-hi(2) = ARG_H2(u)
+      lo(1) = ARG_L1(u)
+      lo(2) = ARG_L2(u)
+      hi(1) = ARG_H1(u)
+      hi(2) = ARG_H2(u)
 
 #ifdef BL_DO_FLCT
-if (forceInflow) then
-do i = 1, SDIM
-loFlctArray(i) = lo(i)
-hiFlctArray(i) = hi(i)
-end do
-loFlctArray(adv_dir) = 1
-hiFlctArray(adv_dir) = 1
-call SET_ARGS(DIMS(uflct), loFlctArray, hiFlctArray)
-allocate(uflct(DIMV(uflct)))
+      if (forceInflow) then
+         do i = 1, SDIM
+            loFlctArray(i) = lo(i)
+            hiFlctArray(i) = hi(i)
+         end do
+         loFlctArray(adv_dir) = 1
+         hiFlctArray(adv_dir) = 1
+         call SET_ARGS(DIMS(uflct), loFlctArray, hiFlctArray)
+         allocate(uflct(DIMV(uflct)))
 !c
 !c     Note that we are 'scaling time' here to step into the fluct file to the
 !c     correct depth.  This requires that time is not further scaled inside the
 !c     the INFL_FILL routine.  Just to be sure, we set convVel = 1 here again.
 !c
-convVel = one
-t_flct = adv_vel*time
-call INFL_FILL(FLCT_XVEL,DIMS(uflct),uflct,xlo,dx,t_flct,bc,f_problo,f_probhi)
-end if
-#endif
-pi = 4.0*ATAN(1.0d0)
-theta = 5.0*(pi/180.0d0)
-
-if (adv_dir .eq. 1)then
-x_vel = adv_vel
-else  
-x_vel = zero
-end if
-
-call filcc(u,DIMS(u),domlo,domhi,dx,xlo,bc)
-
-if (bc(1,1).eq.EXT_DIR.and.ARG_L1(u).lt.domlo(1)) then
-do i = ARG_L1(u), domlo(1)-1
-do j = ARG_L2(u), ARG_H2(u)
-   if(probtype.eq.4) then
-      y = xlo(2) + dx(2)*(float(j-lo(2)) + half)
-      if(time < 2.0) then
-         if(y > 0) then
-            u(i,j) = 1.0
-         else 
-            u(i,j) = 1.0
-         end if
-      else 
-         u(i,j) = 1.0
+         convVel = one
+         t_flct = adv_vel*time
+         call INFL_FILL(FLCT_XVEL,DIMS(uflct),uflct,xlo,dx,t_flct,bc,f_problo,f_probhi)
       end if
-   else
-      u(i,j) = x_vel
-   end if
-end do
-end do
-end if            
-
-if (bc(1,2).eq.EXT_DIR.and.ARG_H1(u).gt.domhi(1)) then
-do i = domhi(1)+1, ARG_H1(u)
-do j = ARG_L2(u), ARG_H2(u)
-u(i,j) = x_vel
-end do
-end do
-end if            
-
-if (bc(2,1).eq.EXT_DIR.and.ARG_L2(u).lt.domlo(2)) then
-do j = ARG_L2(u), domlo(2)-1
-do i = ARG_L1(u), ARG_H1(u)
-if(probtype.eq.5) then
-x = xlo(1) + dx(1)*(float(i-lo(1)) + half)
-if(x < 0.0) then
-u(i,j) = u(i,domlo(2))
-else
-u(i,j) = zero
-end if
-else if(probtype.eq.6) then 
-u(i,j) = x_vel*cos(theta)
-else
-u(i,j) = zero
-end if
-
-#ifdef BL_DO_FLCT
-if (forceLo .and. adv_dir .eq. 2) then
-u(i,j) = zero + uflct(i,1)*turb_scale
-else
-u(i,j) = zero
-end if
 #endif
-end do
-end do
-end if  
+      pi = 4.0*ATAN(1.0d0)
+      theta = 5.0*(pi/180.0d0)
 
-if (bc(2,2).eq.EXT_DIR.and.ARG_H2(u).gt.domhi(2)) then
-do j = domhi(2)+1, ARG_H2(u)
-do i = ARG_L1(u), ARG_H1(u)
-if (probtype .eq. 10) then
+      if (adv_dir .eq. 1)then
+         x_vel = adv_vel
+      else  
+         x_vel = zero
+      end if
+
+      call filcc(u,DIMS(u),domlo,domhi,dx,xlo,bc)
+
+      if (bc(1,1).eq.EXT_DIR.and.ARG_L1(u).lt.domlo(1)) then
+         do i = ARG_L1(u), domlo(1)-1
+            do j = ARG_L2(u), ARG_H2(u)
+               u(i,j) = x_vel
+            end do
+         end do
+      end if            
+
+      if (bc(1,2).eq.EXT_DIR.and.ARG_H1(u).gt.domhi(1)) then
+         do i = domhi(1)+1, ARG_H1(u)
+            do j = ARG_L2(u), ARG_H2(u)
+               u(i,j) = x_vel
+            end do
+         end do
+      end if            
+
+      if (bc(2,1).eq.EXT_DIR.and.ARG_L2(u).lt.domlo(2)) then
+         do j = ARG_L2(u), domlo(2)-1
+            do i = ARG_L1(u), ARG_H1(u)
+               if(probtype.eq.5) then
+                  x = xlo(1) + dx(1)*(float(i-lo(1)) + half)
+                  if(x < 0.0) then
+                     u(i,j) = u(i,domlo(2))
+                  else
+                     u(i,j) = zero
+                  end if
+               else if(probtype.eq.6) then 
+                  u(i,j) = x_vel*cos(theta)
+               else
+                  u(i,j) = zero
+               end if
+               
+#ifdef BL_DO_FLCT
+               if (forceLo .and. adv_dir .eq. 2) then
+                  u(i,j) = zero + uflct(i,1)*turb_scale
+               else
+                  u(i,j) = zero
+               end if
+#endif
+            end do
+         end do
+      end if  
+
+      if (bc(2,2).eq.EXT_DIR.and.ARG_H2(u).gt.domhi(2)) then
+         do j = domhi(2)+1, ARG_H2(u)
+            do i = ARG_L1(u), ARG_H1(u)
+               if (probtype .eq. 10) then
 !c ::: Lid-driven cavity test case, constant velocity on top of domain
-u(i,j) = lid_vel
-else 
-u(i,j) = zero
-end if
-end do
-end do
-end if    
+                  u(i,j) = 2.0
+               else 
+                  u(i,j) = zero
+               end if
+            end do
+         end do
+      end if    
 
 #ifdef BL_DO_FLCT        
-if (forceInflow) deallocate(uflct)
+      if (forceInflow) deallocate(uflct)
 #endif
 
-end subroutine FORT_XVELFILL 
-
+      end subroutine FORT_XVELFILL 
+ 
 !c ::: -----------------------------------------------------------
 !c ::: This routine is called during a filpatch operation when
 !c ::: the patch to be filled falls outside the interior
@@ -1960,7 +1947,7 @@ end subroutine FORT_XVELFILL
       REAL_T     y_vel
       integer    lo(SDIM),hi(SDIM)
 
-      REAL_T  x
+      REAL_T  x, pi, theta
 
 #ifdef BL_DO_FLCT
       integer loFlctArray(SDIM), hiFlctArray(SDIM)
@@ -1995,7 +1982,8 @@ end subroutine FORT_XVELFILL
          call INFL_FILL(FLCT_YVEL,DIMS(vflct),vflct,xlo,dx,t_flct,bc,f_problo,f_probhi)
       end if
 #endif
-
+      pi = 4.0*ATAN(1.0d0)
+      theta = 5.0*(pi/180.0d0)
       if (adv_dir .eq. 2) then
          y_vel = adv_vel
       else  
@@ -2007,8 +1995,12 @@ end subroutine FORT_XVELFILL
       if (bc(1,1).eq.EXT_DIR.and.ARG_L1(v).lt.domlo(1)) then
          do i = ARG_L1(v), domlo(1)-1
            do j = ARG_L2(v),ARG_H2(v)
-             v(i,j) = zero
-           end do
+            if(probtype.eq.6) then
+               v(i,j) = y_vel*sin(theta)
+            else
+               v(i,j) = zero
+            end if
+            end do
          end do
       end if            
 
