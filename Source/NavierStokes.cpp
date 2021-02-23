@@ -18,10 +18,8 @@
 #include <NS_util.H>
 #include <AMReX_BCUtil.H>
 #include <AMReX_MultiFabUtil.H>
-#ifdef BL_USE_VELOCITY
 #include <AMReX_DataServices.H>
 #include <AMReX_AmrData.H>
-#endif
 
 #ifdef AMREX_USE_EB
 #include <AMReX_EBMultiFabUtil.H>
@@ -88,9 +86,7 @@ NavierStokes::initData ()
     //
     // Initialize the state and the pressure.
     //
-    int testNumber;
-    ParmParse pp("ns");
-    pp.query("testNumber", testNumber);
+
     int         ns       = NUM_STATE - BL_SPACEDIM;
     const Real* dx       = geom.CellSize();
     MultiFab&   S_new    = get_new_data(State_Type);
@@ -101,16 +97,15 @@ NavierStokes::initData ()
 
     solitonInit = readDataFile();
 #ifdef _OPENMP
-#pragma omp parallel  if (Gpu::notInLaunchRegion())
+#pragma omp parallel
 #endif
-    for (MFIter snewmfi(S_new,TilingIfNotGPU()); snewmfi.isValid(); ++snewmfi)
+    for (MFIter snewmfi(S_new,true); snewmfi.isValid(); ++snewmfi)
     {
         const Box& vbx = snewmfi.tilebox();
 
         FArrayBox& Sfab = S_new[snewmfi];
         FArrayBox& Pfab = P_new[snewmfi];
 
-	//fixme -- change to GPU once initdata is updated
         Sfab.setVal<RunOn::Host>(0.0,snewmfi.growntilebox(),0,S_new.nComp());
         Pfab.setVal<RunOn::Host>(0.0,snewmfi.grownnodaltilebox(-1,P_new.nGrow()));
 
@@ -192,7 +187,6 @@ NavierStokes::initData ()
     set_body_state(S_new);
 #endif
 
-#ifdef BL_USE_VELOCITY
     //
     // We want to add the velocity from the supplied plotfile
     // to what we already put into the velocity field via FORT_INITDATA.
@@ -206,23 +200,23 @@ NavierStokes::initData ()
     //
     ParmParse pp("ns");
 
-    std::string velocity_plotfile;
-    pp.query("velocity_plotfile", velocity_plotfile);
+    std::string rigid_plotfile;
+    pp.query("rigid_plotfile", rigid_plotfile);
 
-    std::string velocity_plotfile_xvel_name = "x_velocity";
-    pp.query("velocity_plotfile_xvel_name", velocity_plotfile_xvel_name);
 
     Real velocity_plotfile_scale(1.0);
     pp.query("velocity_plotfile_scale",velocity_plotfile_scale);
 
-    if (!velocity_plotfile.empty())
+    if (!rigid_plotfile.empty())
     {
-        Print() << "initData: reading data from: " << velocity_plotfile << " ("
-                << velocity_plotfile_xvel_name << ")" << '\n';
+        std::string rigid_plotfile_name = "volFrac";
+
+        Print() << "initData: reading data from: " << rigid_plotfile << " ("
+                << rigid_plotfile_name << ")" << '\n';
 
         DataServices::SetBatchMode();
         Amrvis::FileType fileType(Amrvis::NEWPLT);
-        DataServices dataServices(velocity_plotfile, fileType);
+        DataServices dataServices(rigid_plotfile, fileType);
 
         if (!dataServices.AmrDataOk())
             //
@@ -235,26 +229,24 @@ NavierStokes::initData ()
 
         int idX = -1;
         for (int i = 0; i < plotnames.size(); ++i)
-            if (plotnames[i] == velocity_plotfile_xvel_name) idX = i;
+            if (plotnames[i] == rigid_plotfile_name) idX = i;
 
         if (idX == -1)
 	       Abort("Could not find velocity fields in supplied velocity_plotfile");
 	      else
-	       Print() << "Found " << velocity_plotfile_xvel_name << ", idX = " << idX << '\n';
+	       Print() << "Found " << rigid_plotfile_name << ", idX = " << idX << '\n';
 
         MultiFab tmp(S_new.boxArray(), S_new.DistributionMap(), 1, 0);
-        for (int i = 0; i < BL_SPACEDIM; i++)
-        {
-	    amrData.FillVar(tmp, level, plotnames[idX+i], 0);
 
-	    MultiFab::Saxpy(S_new, velocity_plotfile_scale, tmp, 0, Xvel+i, 1, 0)
+	    amrData.FillVar(tmp, level, plotnames[idX], 0);
 
-	    amrData.FlushGrids(idX+i);
-        }
+	    MultiFab::Saxpy(S_new, 1.0, tmp, 0, rigid, 1, 0);
+
+	    amrData.FlushGrids(idX);
+
 
 	Print() << "initData: finished init from velocity_plotfile" << '\n';
     }
-#endif /*BL_USE_VELOCITY*/
 
     make_rho_prev_time();
     make_rho_curr_time();
@@ -666,7 +658,7 @@ NavierStokes::initialState(FArrayBox& statein, const Box& bx,
                     double y0 = 0.0;
                     double f = 0.5;
                     double r = sqrt((x-x0)*(x-x0)+(y-y0)*(y-y0));
-                    double R = 0.4;
+                    double R = 1.0;
                     double psi = atan2((y-y0),(x-x0));
                     double uPsi;
                     if(r < 0.2 && r >= 0)
@@ -682,13 +674,13 @@ NavierStokes::initialState(FArrayBox& statein, const Box& bx,
                         uPsi = 0.0;
                     }
 
-                    stateArray(i,j,k, Xvel) = -1.0*uPsi*sin(psi) + 0.3;
-                    stateArray(i,j,k, Yvel) = uPsi*cos(psi);
+                    stateArray(i,j,k, Xvel) = 0.3;//-1.0*uPsi*sin(psi) + 0.3;
+                    stateArray(i,j,k, Yvel) = 0.0;//uPsi*cos(psi);
 
                     // stateArray(i,j,k, Density) = f*rho1 + (1-f)*rho2;
                     // stateArray(i,j,k, Tracer) = f;
-                    stateArray(i,j, k, Density) = rho1 + 0.5*(rho2-rho1)*(1-tanh(50.0*(r-R)));
-                    stateArray(i,j, k, Tracer) = 0.5*(1-tanh(50.0*(r-R)));
+                    stateArray(i,j, k, Density) = 1.0; //rho1 + 0.5*(rho2-rho1)*(1-tanh(50.0*(r-R)));
+                    stateArray(i,j, k, Tracer) = 0.5*(1.0-tanh(50.0*(r-R)));
 
                 }
 
@@ -1274,6 +1266,72 @@ NavierStokes::initialState(FArrayBox& statein, const Box& bx,
                     }
 
                 }
+                else if(testNumber == 27)
+                {
+                    #ifdef AMREX_USE_EB
+                    // flow past cylinder, EB test
+                    stateArray(i,j,k, Xvel) = 1.0;//*cos(5.0*M_PI/180.0);
+                    stateArray(i,j,k, Yvel) = 0.0;
+                    stateArray(i,j,k, Density) = 1.0;
+                    stateArray(i,j,k, Tracer) = 1.0;
+                    #else
+                    Real y0 = 0.0; Real x0 = -0.025; Real R = 0.0021;
+                    Real dist = sqrt((x-x0)*(x-x0)+(y-y0)*(y-y0));
+                    stateArray(i,j, k, Density) = 1.0 + 0.5*(100.0-1.0)*(1-tanh(5000.0*(dist-R)));
+                    stateArray(i,j, k, Xvel) = 1.0 - 0.5*(1.0)*(1-tanh(5000.0*(dist-R)));
+                    stateArray(i,j, k, Yvel) = 0.0;
+                    stateArray(i,j, k, Tracer) = 0.5*(1-tanh(5000.0*(dist-R)));
+                    #endif
+                }
+                else if(testNumber == 28)
+                {
+                    // flow past cylinder, diffuse rigid test
+                    Vector<Real> centre(BL_SPACEDIM);
+                    Real dist, radius, adv_vel;
+                    ParmParse pp("ns");
+                    pp.getarr("cyl_centre", centre, 0, BL_SPACEDIM);
+                    pp.query("cyl_radius", radius);
+                    pp.query("adv_vel", adv_vel);
+                    dist = sqrt((x-centre[0])*(x-centre[0])+(y-centre[1])*(y-centre[1]));
+                    stateArray(i,j,k,Xvel) = adv_vel;
+                    stateArray(i,j,k,Yvel) = 0.0;
+                    stateArray(i,j,k,Density) = 1.0;
+                    stateArray(i,j,k,Tracer) = 1.0;
+                    stateArray(i,j,k,rigid) = 0.5*(1.0-tanh(10.0*(dist-radius)));
+
+                }
+                else if(testNumber == 29)
+                {
+                    // flat laminar plate, diffuse rigid test
+                    Real Uinf;
+                    ParmParse pp("ns");
+
+                    pp.query("u_inf", Uinf);
+                    stateArray(i,j,k,Xvel) = Uinf;
+                    stateArray(i,j,k,Yvel) = 0.0;
+                    stateArray(i,j,k,Density) = 1.0;
+                    stateArray(i,j,k,Tracer) = 1.0;
+                    stateArray(i,j,k,rigid) = 0.5*(1.0-tanh(100.0*(y-0.01)));
+                }
+                else if(testNumber == 30)
+                {
+                    Real Uinf, theta;
+                    ParmParse pp("ns");
+
+                    pp.query("u_inf", Uinf);
+                    pp.query("theta", theta);
+                    stateArray(i,j,k,Xvel) = 1.0*cos(theta*M_PI/180.0);
+                    stateArray(i,j,k,Yvel) = 1.0*sin(theta*M_PI/180.0);
+                    stateArray(i,j,k,Tracer) = 1.0;
+                    stateArray(i,j,k,Density) = 1.0;
+                }
+                else if(testNumber == 31)
+                {
+                    stateArray(i,j,k,Xvel) = 0.0;
+                    stateArray(i,j,k,Yvel) = 0.0;
+                    stateArray(i,j,k,Density) = 1.0;
+                    stateArray(i,j,k, Tracer) = 1.0;
+                }
             }
         }
     }
@@ -1342,7 +1400,46 @@ NavierStokes::advance (Real time,
     }
 
     advance_setup(time,dt,iteration,ncycle);
+    const Real* dx = geom.CellSize();
+    const Real cur_time = state[State_Type].prevTime();
 
+    MultiFab&   S_new    = get_old_data(State_Type);
+
+    MultiFab Sborder(grids, dmap, NUM_STATE, S_new.nGrow(), MFInfo(), Factory());
+    MultiFab::Copy(Sborder, S_new, 0, 0, NUM_STATE, S_new.nGrow());
+    Sborder.FillBoundary(geom.periodicity());
+    if(do_rigid)
+    {
+    #ifdef _OPENMP
+    #pragma omp parallel
+    #endif
+        {
+    	for (MFIter mfi(S_new, true); mfi.isValid(); ++mfi)
+    	{
+            const Box& bx = mfi.tilebox();
+
+    	    const FArrayBox& statein = Sborder[mfi];
+    	    FArrayBox& stateout      =   S_new[mfi];
+            setRigidBodyBoundaryCondition(statein, stateout, bx, dx);
+
+        }
+        }
+    #ifdef _OPENMP
+    #pragma omp parallel
+    #endif
+        {
+    	for (MFIter mfi(S_new, true); mfi.isValid(); ++mfi)
+    	{
+            const Box& bx = mfi.tilebox();
+
+    	    const FArrayBox& statein = Sborder[mfi];
+    	    FArrayBox& stateout      =   S_new[mfi];
+            extrapRigidBodyState(statein, stateout, bx);
+
+
+        }
+        }
+    }
     //
     // Calculate the time N viscosity and diffusivity
     //   Note: The viscosity and diffusivity at time N+1 are
@@ -1702,10 +1799,12 @@ NavierStokes::predict_velocity (Real  dt)
             AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
             {
                 tf(i,j,k,n) = ( tf(i,j,k,n) + visc(i,j,k,n) - gp(i,j,k,n) ) / rho(i,j,k);
-
             });
         }
     }
+
+    Vector<BCRec> math_bcs(AMREX_SPACEDIM);
+    math_bcs = fetchBCArray(State_Type,Xvel,AMREX_SPACEDIM);
 
     //velpred=1 only, use_minion=1, ppm_type, slope_order
     Godunov::ExtrapVelToFaces( Umf, forcing_term, AMREX_D_DECL(u_mac[0], u_mac[1], u_mac[2]),
@@ -1734,7 +1833,9 @@ NavierStokes::scalar_advection (Real dt,
     //
     // Get simulation parameters.
     //
+
     const int   num_scalars    = lscalar - fscalar + 1;
+
     const Real* dx             = geom.CellSize();
     const Real  prev_time      = state[State_Type].prevTime();
 
@@ -1788,6 +1889,10 @@ NavierStokes::scalar_advection (Real dt,
         //////////////////////////////////////////////////////////////////////////////
 
         const Box& domain = geom.Domain();
+
+        Vector<BCRec> math_bc(num_scalars);
+        math_bc = fetchBCArray(State_Type,fscalar,num_scalars);
+
 
         MultiFab cfluxes[AMREX_SPACEDIM];
         MultiFab edgstate[AMREX_SPACEDIM];
@@ -1894,14 +1999,16 @@ NavierStokes::scalar_advection (Real dt,
             }
         }
 
+
+        Vector<BCRec> math_bcs(num_scalars);
+        math_bcs = fetchBCArray(State_Type, fscalar, num_scalars);
+
         amrex::Gpu::DeviceVector<int> iconserv;
         iconserv.resize(num_scalars, 0);
-	// does this actually put data in GPU memory?
         for (int comp = 0; comp < num_scalars; ++comp)
         {
             iconserv[comp] = (advectionType[fscalar+comp] == Conservative) ? 1 : 0;
 	}
-
 
     Godunov::ComputeAofs(*aofs, fscalar, num_scalars,
                          Smf, 0,
@@ -1920,6 +2027,13 @@ NavierStokes::scalar_advection (Real dt,
     } // FillPathIterator
 
     delete divu_fp;
+
+    if(do_rigid)
+    {
+        aofs->setVal(0.0,rigid,1,aofs->nGrow());
+        for (int d = 0; d < AMREX_SPACEDIM; ++d)
+            fluxes[d].setVal(0.0,rigid-AMREX_SPACEDIM,1,fluxes[d].nGrow());
+    }
 
     if (do_reflux)
     {
@@ -2089,27 +2203,17 @@ NavierStokes::scalar_diffusion_update (Real dt,
 
 	    for (MFIter fmfi(*fluxn[d]); fmfi.isValid(); ++fmfi)
 	    {
-	      const Box& ebox = (*fluxn[d])[fmfi].box();
+	      const Box& ebox = (*fluxn[d])[fmfi].box();//fmfi.tilebox();
 
 	      fluxtot.resize(ebox,1);
-	      Elixir fdata_i = fluxtot.elixir();
-
-	      auto const& ftot = fluxtot.array();
-	      auto const& fn   = fluxn[d]->array(fmfi);
-	      auto const& fnp1 = fluxnp1[d]->array(fmfi);
-
-	      amrex::ParallelFor(ebox, [ftot, fn, fnp1 ]
-	      AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-	      {
-		ftot(i,j,k) = fn(i,j,k) + fnp1(i,j,k);
-	      });
+	      fluxtot.copy<RunOn::Host>((*fluxn[d])[fmfi],ebox,0,ebox,0,1);
+	      fluxtot.plus<RunOn::Host>((*fluxnp1[d])[fmfi],ebox,0,0,1);
 
 	      if (level < parent->finestLevel())
-		fluxes[fmfi].copy<RunOn::Gpu>(fluxtot);
+		fluxes[fmfi].copy<RunOn::Host>(fluxtot);
 
-	      //fixme - not sure what FineAdd does exactly, presumable okay wo sync here
 	      if (level > 0)
-		getViscFluxReg().FineAdd(fluxtot,d,fmfi.index(),0,sigma,1,dt,RunOn::Gpu);
+		getViscFluxReg().FineAdd(fluxtot,d,fmfi.index(),0,sigma,1,dt,RunOn::Host);
 	    }
 
 	    if (level < parent->finestLevel())
@@ -3569,11 +3673,9 @@ NavierStokes::calcViscosity (const Real time,
                       auto const& rho    = S_cc.array(mfi,Density);
                       auto const& Trac       = S_cc.array(mfi,Tracer);
                       auto const& Trac2       = S_cc.array(mfi,Tracer2);
-                      // Array4<Real>  Trac3;
-                      // if(do_trac3)
-                      // {
+
                           auto const& Trac3       = S_cc.array(mfi,Tracer3);
-                      // }
+
                       auto const& mu      = visc.array(mfi);
                       amrex::ParallelFor(gbx, [mu, rho, Trac, Trac2, Trac3]
                       AMREX_GPU_DEVICE(int i, int j, int k) noexcept
@@ -3655,7 +3757,6 @@ void
 NavierStokes::getViscosity (MultiFab* viscosity[BL_SPACEDIM],
                             const Real time)
 {
-
     // //
     // // Select time level to work with (N or N+1)
     // //

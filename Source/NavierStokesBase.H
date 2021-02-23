@@ -245,6 +245,13 @@ public:
     void computeScalarGradient(const amrex::FArrayBox& statein, amrex::FArrayBox& scalGrad, const amrex::Box& bx,
         const amrex::Real* dx, const int nComp);
 
+    void setRigidBodyBoundaryCondition(const amrex::FArrayBox& statein, amrex::FArrayBox& stateout,
+        const amrex::Box& bx, const amrex::Real* dx);
+    amrex::Real sgn(const amrex::Real x);
+
+    void extrapRigidBodyState(const amrex::FArrayBox& statein, amrex::FArrayBox& stateout,
+        const amrex::Box& bx);
+
     void advance_cleanup (int iteration,int ncycle);
 
     void diffuse_scalar_setup (int sigma, int& rho_flag);
@@ -702,6 +709,7 @@ public:
     static amrex::Real init_shrink;   // reduction factor of first esimated timestep
     static int  init_iter;            // # of timestep iterations for initial pressure
     static int  init_vel_iter;        // # of iterations for initial velocity projection
+    static int  testNumber;        // # of iterations for initial velocity projection
     static amrex::Real cfl;           // desired maximum cfl
     static amrex::Real change_max;    // maximum change in dt over a timestep
     static amrex::Real fixed_dt;      // set > 0 to specify dt
@@ -753,10 +761,12 @@ public:
     static int  Tracer;
     static int  Tracer2;
     static int  Tracer3;
+    static int  rigid;
     static int  nTrac;
     static int  Temp;
     static int  do_trac2;
     static int  do_trac3;
+    static int  do_rigid;
     static int  do_variable_visc;
     static int  do_temp;
     static int  do_cons_trac;

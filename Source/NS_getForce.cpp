@@ -51,6 +51,11 @@ NavierStokesBase::getForce (FArrayBox&       force,
    const int*  sgrad_lo     = scalGrad.loVect();
    const int*  sgrad_hi     = scalGrad.hiVect();
    const int   nscal    = NUM_SCALARS;
+   RealBox    gridloc = RealBox(bx,geom.CellSize(),geom.ProbLo());
+   Dim3 lo = lbound(bx);
+   Dim3 hi = ubound(bx);
+   const Real* xlo = gridloc.lo();
+   const Real* xhi = gridloc.hi();
       int tracInd = 0;
       // double sigma = 0.0;
       Vector<Real> sigmaS(nTrac);
@@ -223,8 +228,6 @@ NavierStokesBase::getForce (FArrayBox&       force,
                                       << " / " << scalgradmax[n] << std::endl;
    } //end if(getForceVerbose)
 
-   RealBox gridloc = RealBox(bx,geom.CellSize(),geom.ProbLo());
-
    // Here's the meat
    //
    // Velocity forcing
@@ -243,10 +246,11 @@ NavierStokesBase::getForce (FArrayBox&       force,
         auto const& scalGradArr = scalGrad.array(0);
 
         // if ( std::abs(grav) > 0.0001) {
-          amrex::ParallelFor(bx, [frc, scal, grav, scalGradArr, sigmaS]
+          amrex::ParallelFor(bx, [frc, scal, grav, scalGradArr, sigmaS, lo, xlo, dx,time]
           AMREX_GPU_DEVICE(int i, int j, int k) noexcept
           {
               double Fsvx; double Fsvy; double Fsvz;
+              double y = xlo[1] + dx[1]*((j-lo.y) + 0.5);
 
               if(nTrac == 3)
               {
@@ -272,6 +276,14 @@ NavierStokesBase::getForce (FArrayBox&       force,
                   #else
                   Fsvx = sigmaS[0]*scalGradArr(i,j,k,0)*scalGradArr(i,j,k,2);
                   Fsvy = sigmaS[0]*scalGradArr(i,j,k,1)*scalGradArr(i,j,k,2);
+                  // if(testNumber == 28)
+                  // {
+                  //     if(time < 2.0)
+                  //     {
+                  //         Fsvx += 0.05*tanh(10.0*y);
+                  //     }
+                  // }
+
                   #endif
               }
 

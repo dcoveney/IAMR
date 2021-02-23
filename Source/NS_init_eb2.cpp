@@ -429,6 +429,67 @@ else if(geom_type == "soliton2d")
     auto gshop = EB2::makeShop(boxcyl);
     EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level, 10);
 }
+else if(geom_type == "ramp-laminar")
+{
+    Vector<Real> point(AMREX_SPACEDIM);
+    Vector<Real> normal(AMREX_SPACEDIM);
+
+    ppeb2.getarr("point", point, 0, BL_SPACEDIM);
+    ppeb2.getarr("normal", normal, 0, BL_SPACEDIM);
+
+    EB2::PlaneIF plane1({AMREX_D_DECL(point[0], point[1], 0.)},
+                            {AMREX_D_DECL(normal[0], normal[1], 0.)}, false);
+
+    auto shop = EB2::makeShop(plane1);
+    EB2::Build(shop, geom, required_coarsening_level, max_coarsening_level);
+
+}
+else if(geom_type == "triangle-cavity")
+{
+    Print() << "HERE\n";
+    Vector<Real> point1(AMREX_SPACEDIM);
+    Vector<Real> normal1(AMREX_SPACEDIM);
+    ppeb2.getarr("point1", point1, 0, BL_SPACEDIM);
+    ppeb2.getarr("normal1", normal1, 0, BL_SPACEDIM);
+    Vector<Real> point2(AMREX_SPACEDIM);
+    Vector<Real> normal2(AMREX_SPACEDIM);
+    ppeb2.getarr("point2", point2, 0, BL_SPACEDIM);
+    ppeb2.getarr("normal2", normal2, 0, BL_SPACEDIM);
+    Vector<Real> point3(AMREX_SPACEDIM);
+    Vector<Real> normal3(AMREX_SPACEDIM);
+    ppeb2.getarr("point3", point3, 0, BL_SPACEDIM);
+    ppeb2.getarr("normal3", normal3, 0, BL_SPACEDIM);
+
+    EB2::PlaneIF plane1({AMREX_D_DECL(point1[0], point1[1], 0.)},
+                            {AMREX_D_DECL(normal1[0], normal1[1], 0.)}, false);
+    EB2::PlaneIF plane2({AMREX_D_DECL(point2[0], point2[1], 0.)},
+                            {AMREX_D_DECL(normal2[0], normal2[1], 0.)}, false);
+    EB2::PlaneIF plane3({AMREX_D_DECL(point3[0], point3[1], 0.)},
+                            {AMREX_D_DECL(normal3[0], normal3[1], 0.)}, false);
+
+    auto planeX = EB2::makeComplement(EB2::makeUnion(EB2::makeComplement(plane1),
+        (plane2)));
+
+    auto planeX_gshop = EB2::makeShop(planeX);
+    EB2::Build(planeX_gshop, geom, required_coarsening_level, max_coarsening_level);
+
+
+}
+
+// else if(geom_type == "plane")
+// {
+//     Vector<Real> point(AMREX_SPACEDIM);
+//     Vector<Real> normal(AMREX_SPACEDIM);
+//     ppeb2.getarr("point", point, 0, BL_SPACEDIM);
+//     ppeb2.getarr("normal", normal, 0, BL_SPACEDIM);
+//
+//     EB2::PlaneIF plane1({AMREX_D_DECL(point[0], point[1], 0.)},
+//                             {AMREX_D_DECL(normal[0], normal[1], 0.)}, false);
+//
+//     auto shop = EB2::makeShop(plane1);
+//     EB2::Build(shop, geom, required_coarsening_level, max_coarsening_level,4);
+//
+// }
 #endif
 else
 {
@@ -617,4 +678,7 @@ NavierStokesBase::set_body_state(MultiFab& S)
     });
   }
 }
+
+
+
 #endif

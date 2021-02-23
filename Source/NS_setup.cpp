@@ -162,6 +162,7 @@ NavierStokes::variableSetUp ()
     // int intHeight = NUM_STATE++;
     int Trac2;
     int Trac3;
+    int rigid;
     if (do_trac2)
     {
         Trac2 = NUM_STATE++;
@@ -171,6 +172,11 @@ NavierStokes::variableSetUp ()
     {
         Trac3 = NUM_STATE++;
         nTrac = 3;
+    }
+
+    if(do_rigid)
+    {
+        rigid = NUM_STATE++;
     }
 
     if (do_temp) NUM_STATE++;
@@ -206,6 +212,8 @@ NavierStokes::variableSetUp ()
 #endif
 
     set_x_vel_bc(bc,phys_bc);
+    Print() << "bc(2,2) = " << bc.hi(1) << std::endl;
+
     desc_lst.setComponent(State_Type,Xvel,"x_velocity",bc,BndryFunc(FORT_XVELFILL));
 
     set_y_vel_bc(bc,phys_bc);
@@ -235,6 +243,11 @@ NavierStokes::variableSetUp ()
     {
        set_scalar_bc(bc,phys_bc);
        desc_lst.setComponent(State_Type,Trac3,"tracer3",bc,BndryFunc(FORT_ADV3FILL));
+    }
+    if (do_rigid)
+    {
+       set_scalar_bc(bc,phys_bc);
+       desc_lst.setComponent(State_Type,rigid,"rigid",bc,BndryFunc(FORT_ADVFILL));
     }
 
     //
@@ -363,6 +376,10 @@ NavierStokes::variableSetUp ()
 
     derive_lst.add("mag_vel",IndexType::TheCellType(),1,dermvel,the_same_box);
     derive_lst.addComponent("mag_vel",desc_lst,State_Type,Xvel,BL_SPACEDIM);
+    derive_lst.add("axial_vel",IndexType::TheCellType(),1,deraxvel,the_same_box);
+    derive_lst.addComponent("axial_vel",desc_lst,State_Type,Xvel,BL_SPACEDIM);
+    derive_lst.add("normal_vel",IndexType::TheCellType(),1,dernormvel,the_same_box);
+    derive_lst.addComponent("normal_vel",desc_lst,State_Type,Xvel,BL_SPACEDIM);
     //
     // magnitude of vorticity
     //

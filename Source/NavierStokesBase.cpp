@@ -59,6 +59,7 @@ MacProj*    NavierStokesBase::mac_projector = 0;
 Real NavierStokesBase::init_shrink        = 1.0;
 int  NavierStokesBase::init_iter          = 2;
 int  NavierStokesBase::init_vel_iter      = 1;
+int  NavierStokesBase::testNumber         = 0;
 Real NavierStokesBase::cfl                = 0.8;
 Real NavierStokesBase::change_max         = 1.1;
 Real NavierStokesBase::init_dt            = -1.0;
@@ -94,10 +95,12 @@ Real        NavierStokesBase::muL2               = 0.0;
 int         NavierStokesBase::Tracer                    = -1;
 int         NavierStokesBase::Tracer2                   = -1;
 int         NavierStokesBase::Tracer3                   = -1;
+int         NavierStokesBase::rigid                   = -1;
 int         NavierStokesBase::nTrac                     = -1;
 int         NavierStokesBase::Temp                      = -1;
 int         NavierStokesBase::do_trac2                  = 0;
 int         NavierStokesBase::do_trac3                  = 0;
+int         NavierStokesBase::do_rigid                  = 0;
 int         NavierStokesBase::do_variable_visc          = 0;
 int         NavierStokesBase::do_temp                   = 0;
 int         NavierStokesBase::do_cons_trac              = 0;
@@ -437,7 +440,7 @@ NavierStokesBase::Initialize ()
 
     //
     // Get timestepping parameters.
-    //
+    pp.query("testNumber", testNumber);
     pp.get("cfl",cfl);
     pp.query("init_iter",init_iter);
     pp.query("init_vel_iter",init_vel_iter);
@@ -459,6 +462,7 @@ NavierStokesBase::Initialize ()
     pp.query("do_temp",                  do_temp          );
     pp.query("do_trac2",                 do_trac2         );
     pp.query("do_trac3",                 do_trac3         );
+    pp.query("do_rigid",                 do_rigid         );
     pp.query("do_cons_trac",             do_cons_trac     );
     pp.query("do_cons_trac2",            do_cons_trac2    );
     pp.query("do_sync_proj",             do_sync_proj     );
@@ -702,6 +706,13 @@ NavierStokesBase::Initialize_specific ()
     {
         Tracer3 = Density+3;
         nTrac = 3;
+
+    }
+    if(do_rigid)
+    {
+        if(do_trac2){ rigid = Tracer2+1;}
+        if(do_trac3){ rigid = Tracer3+1;}
+        if(!do_trac3 && !do_trac2) {rigid = Tracer + 1;}
     }
     ST_coefs.resize(nTrac);
     if(nTrac == 3)
@@ -1525,6 +1536,104 @@ NavierStokesBase::computeScalarGradient(const FArrayBox& statein, FArrayBox& sca
 
 }
 
+void NavierStokesBase::setRigidBodyBoundaryCondition(const FArrayBox& statein, FArrayBox& stateout, const Box& bx,
+    const Real* dx)
+{
+    Array4<Real const> const& S_arr_i = statein.array();
+    Array4<Real> const& S_arr_o = stateout.array();
+    double rC, rR, rL, rU, rD;
+    double x,y;
+    double l = 0.2;
+    Dim3 lo = lbound(bx);
+    Dim3 hi = ubound(bx);
+    RealBox    gridloc = RealBox(bx,geom.CellSize(),geom.ProbLo());
+    const Real* xlo = gridloc.lo();
+
+    for(int k = lo.z; k <= hi.z; k++)
+    {
+        for(int j = lo.y; j <= hi.y; j++)
+        {
+            for(int i = lo.x; i <= hi.x; i++)
+            {
+                rC = S_arr_i(i,j,k,rigid); rR = S_arr_i(i+1,j,k,rigid);
+                rL = S_arr_i(i-1,j,k,rigid); rU = S_arr_i(i,j+1,k,rigid);
+                rD = S_arr_i(i,j-1,k,rigid);
+                if(sgn(rC-0.5)*sgn(rR-0.5) < 0 || sgn(rC-0.5)*sgn(rL-0.5) < 0
+                    || sgn(rC-0.5)*sgn(rU-0.5) < 0 || sgn(rC-0.5)*sgn(rD-0.5) < 0)
+                {
+                    if(testNumber == 29)
+                    {
+                        //flat laminar plate test, slip walls for an entry zone (x<0)
+                        x = xlo[0] + dx[0]*((i-lo.x) + 0.5);
+                        if(x < 0.0)
+                        {
+                            S_arr_o(i,j,k, Xvel) = 1.0;
+                            S_arr_o(i,j,k, Yvel) = 0.0;
+
+                        }
+                        else
+                        {
+                            S_arr_o(i,j,k,Xvel) = 0.0;
+                            S_arr_o(i,j,k,Yvel) = 0.0;
+                        }
+                    }
+                    // else if(testNumber == 6)
+                    // {
+                    //     x = xlo[0] + dx[0]*((i-lo.x) + 0.5);
+                    //     y = xlo[1] + dx[1]*((j-lo.y) + 0.5);
+                    //     if(x < l*cos(5.0*M_PI/180.0) && y < l*sin(5.0*M_PI/180.0))
+                    //     {
+                    //         S_arr_o(i,j,k, Xvel) = 1.0*cos(5.0*M_PI/180.0);
+                    //         S_arr_o(i,j,k, Yvel) = 1.0*sin(5.0*M_PI/180.0);
+                    //     }
+                    //     else
+                    //     {
+                    //         S_arr_o(i,j,k,Xvel) = 0.0;
+                    //         S_arr_o(i,j,k,Yvel) = 0.0;
+                    //     }
+                    // }
+                    else
+                    {
+                        S_arr_o(i,j,k,Xvel) = 0.0;
+                        S_arr_o(i,j,k,Yvel) = 0.0;
+                    }
+
+                }
+
+            }
+        }
+    }
+}
+
+void NavierStokesBase::extrapRigidBodyState(const FArrayBox& statein, FArrayBox& stateout, const Box& bx)
+{
+    Array4<Real const> const& S_arr_i = statein.array();
+    Array4<Real> const& S_arr_o = stateout.array();
+    double r;
+    Dim3 lo = lbound(bx);
+    Dim3 hi = ubound(bx);
+    for(int k = lo.z; k <= hi.z; k++)
+    {
+        for(int j = lo.y; j <= hi.y; j++)
+        {
+            for(int i = lo.x; i <= hi.x; i++)
+            {
+                r = S_arr_i(i,j,k,rigid);
+                if(r > 0.5)
+                {
+                    S_arr_o(i,j,k,Xvel) = 0.0;
+                    S_arr_o(i,j,k,Yvel) = 0.0;
+                }
+            }
+        }
+    }
+}
+
+Real NavierStokesBase::sgn(const Real x)
+{
+    return x/fabs(x);
+}
+
 void
 NavierStokesBase::errorEst (TagBoxArray& tags,
 	               int          clearval,
@@ -1543,12 +1652,12 @@ NavierStokesBase::errorEst (TagBoxArray& tags,
     MultiFab SBorder(grids, dmap, NUM_STATE, S_new.nGrow()+4, MFInfo(), Factory());
     MultiFab::Copy(SBorder, S_new, 0, 0, NUM_STATE, S_new.nGrow());
     // SBorder.FillBoundary(geom.periodicity());
-    FillPatch(*this, SBorder, S_new.nGrow()+4, cur_time, State_Type, 0, NUM_STATE);
+    FillPatch(*this, SBorder, S_new.nGrow()+1, cur_time, State_Type, 0, NUM_STATE);
     int tagComps=1;
-    tagComps = (do_trac3 == 1) ? 2 : 1;
+    tagComps = (do_trac3 || do_rigid) ? 2 : 1;
     Vector<Real> rhoGradMaxCycle(tagComps);
     Vector<Real> rhoGradMax(tagComps);
-    MultiFab rhoGradFab(grids, dmap, tagComps, S_new.nGrow()+2);
+    MultiFab rhoGradFab(grids, dmap, tagComps, S_new.nGrow());
     Vector<int> compVars(tagComps);
     compVars[0] = Density;
     if(do_trac3)
@@ -1557,7 +1666,11 @@ NavierStokesBase::errorEst (TagBoxArray& tags,
         compVars[1] = Tracer3;
         // compVars[2] = Tracer3;
     }
-
+    if(do_rigid)
+    {
+        compVars[0] = rigid;
+        compVars[1] = rigid;
+    }
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -1583,7 +1696,7 @@ NavierStokesBase::errorEst (TagBoxArray& tags,
     {
     ParallelDescriptor::ReduceRealMax(rhoGradMax[n]);
     }
-    FillPatch(*this, SBorder, S_new.nGrow()+4, cur_time, State_Type, 0, NUM_STATE);
+    FillPatch(*this, SBorder, S_new.nGrow()+1, cur_time, State_Type, 0, NUM_STATE);
     // FillPatch(*this, rhoGradFab, S_new.nGrow()+2, cur_time, State_Type, 0, tagComps);
 
     // std::cout << "Max density gradient: " << rhoGradMax << std::endl;
@@ -1780,6 +1893,7 @@ NavierStokesBase::estTimeStep ()
     MultiFab SBorder(grids, dmap, NUM_STATE,U_new.nGrow()+1, MFInfo(), Factory());
 
     MultiFab scalGradFab(grids, dmap, (AMREX_SPACEDIM+1)*nTrac, U_new.nGrow());
+
 
     //
     MultiFab::Copy(SBorder, U_new, 0, 0, NUM_STATE,U_new.nGrow());
@@ -3567,6 +3681,27 @@ NavierStokesBase::scalar_advection_update (Real dt,
             }
 
     }
+    // HACK HACK HACK
+    // experimenting with a stationary scalar field
+    if(do_rigid)
+    {
+        #ifdef _OPENMP
+        #pragma omp parallel if (Gpu::notInLaunchRegion())
+        #endif
+                for (MFIter mfi(S_old,TilingIfNotGPU()); mfi.isValid(); ++mfi)
+        	{
+        	    const Box&  bx = mfi.tilebox();
+                    const auto& Snew = S_new[mfi].array(rigid);
+                    const auto& Sold = S_old[mfi].const_array(rigid);
+
+                    amrex::ParallelFor(bx, [ Snew, Sold]
+                    AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        	    {
+                        Snew(i,j,k) = Sold(i,j,k);
+                    });
+            }
+        }
+
 
     //
     // Check the max of Snew and for NANs in solution
@@ -4575,10 +4710,6 @@ NavierStokesBase::initial_velocity_diffusion_update (Real dt)
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
-        for (MFIter mfi(tforces,TilingIfNotGPU()); mfi.isValid(); ++mfi)
-        {
-            FArrayBox tforces_fab;
-
 
             for(MFIter SGmfi(scalGradFab,true); SGmfi.isValid(); ++SGmfi)
             {
@@ -4605,7 +4736,7 @@ NavierStokesBase::initial_velocity_diffusion_update (Real dt)
                 // tforces[mfi].copy<RunOn::Host>(tforces_fab,bx,0,bx,0,AMREX_SPACEDIM);
             }
             // getForce(tforces_fab,bx,0,Xvel,AMREX_SPACEDIM,prev_time,U_old[mfi],U_old[mfi],Density);
-        }
+
 
         //
         // Compute viscous terms

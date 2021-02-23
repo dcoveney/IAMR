@@ -121,7 +121,7 @@ void mlmg_mac_level_solve (Amr* parent, const MultiFab* cphi, const BCRec& phys_
     LPInfo info;
     info.setAgglomeration(agglomeration);
     info.setConsolidation(consolidation);
-
+    // info.setMaxCoarseningLevel(0);
     Array<MultiFab*,AMREX_SPACEDIM>  umac;
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
         umac[idim]= &(u_mac[idim]);

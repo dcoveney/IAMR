@@ -26,7 +26,7 @@ module derive_2d_module
 
   private
 
-  public dermodgradrho, derkeng,derlogs, dermvel, &
+  public dermodgradrho, derkeng,derlogs, dermvel, deraxvel, dernormvel, &
        derlgrhodust, dergrdp, dernull, IntPos, derCurv
 
 contains
@@ -244,6 +244,79 @@ subroutine dermodgradrho (e,DIMS(e),nv,dat,DIMS(dat),ncomp,&
       end do
 
     end subroutine dermvel
+
+    subroutine deraxvel (e,DIMS(e),nv,dat,DIMS(dat),ncomp,&
+      lo,hi,domlo,domhi,delta,xlo,time,dt,&
+      bc,level,grid_no) bind(C,name="deraxvel")
+implicit none
+!c
+!c ::: This routine will derive the magnitude of the velocity field
+!c ::: from the velocity field
+!c
+
+integer    lo(2), hi(2)
+integer    DIMDEC(e)
+integer    DIMDEC(dat)
+integer    domlo(2), domhi(2)
+integer    nv, ncomp
+integer    bc(2,2,ncomp)
+REAL_T     delta(2), xlo(2), time, dt
+REAL_T     e(DIMV(e),nv)
+REAL_T     dat(DIMV(dat),ncomp)
+integer    level, grid_no
+
+integer    i,j
+REAL_T     u, v, theta, pi
+
+pi = 4.0*ATAN(1.0d0)
+theta = 5.0*(pi/180.0d0)
+
+do j = lo(2), hi(2)
+do i = lo(1), hi(1)
+u   = dat(i,j,1)
+v   = dat(i,j,2)
+e(i,j,1) = u/cos(theta)
+end do
+end do
+
+end subroutine deraxvel
+
+
+subroutine dernormvel (e,DIMS(e),nv,dat,DIMS(dat),ncomp,&
+      lo,hi,domlo,domhi,delta,xlo,time,dt,&
+      bc,level,grid_no) bind(C,name="dernormvel")
+implicit none
+!c
+!c ::: This routine will derive the magnitude of the velocity field
+!c ::: from the velocity field
+!c
+
+integer    lo(2), hi(2)
+integer    DIMDEC(e)
+integer    DIMDEC(dat)
+integer    domlo(2), domhi(2)
+integer    nv, ncomp
+integer    bc(2,2,ncomp)
+REAL_T     delta(2), xlo(2), time, dt
+REAL_T     e(DIMV(e),nv)
+REAL_T     dat(DIMV(dat),ncomp)
+integer    level, grid_no
+
+integer    i,j
+REAL_T     u, v, theta, pi
+
+pi = 4.0*ATAN(1.0d0)
+theta = 5.0*(pi/180.0d0)
+
+do j = lo(2), hi(2)
+do i = lo(1), hi(1)
+u   = dat(i,j,1)
+v   = dat(i,j,2)
+e(i,j,1) = v*cos(theta)
+end do
+end do
+
+end subroutine dernormvel
 
       subroutine derlgrhodust (e,DIMS(e),nv,dat,DIMS(dat),ncomp,&
                                    lo,hi,domlo,domhi,delta,xlo,time,dt,&
